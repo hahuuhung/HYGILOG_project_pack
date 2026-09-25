@@ -1,435 +1,502 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Modal } from '@/components/ui/modal';
 import { 
   Plus, 
   Thermometer, 
   Search, 
   Filter, 
-  Download, 
   AlertTriangle, 
   CheckCircle2, 
+  Clock, 
+  User, 
   Building2, 
-  Calendar,
-  X,
-  Radio
+  ArrowUpRight,
+  TrendingDown,
+  Warehouse,
+  Flame,
+  Snowflake,
+  ShieldCheck
 } from 'lucide-react';
 import { formatDate, formatTemperature } from '@/lib/utils';
+import Link from 'next/link';
 
-interface TempRecord {
+interface TempLog {
   id: string;
   equipment: string;
-  equipmentType: 'freezer' | 'chiller' | 'hot_holding' | 'cooking';
+  location: string;
+  category: 'freezer' | 'chiller' | 'cooking' | 'holding';
   temp: number;
+  minAllowed: number;
+  maxAllowed: number;
   time: string;
-  status: 'OK' | 'Cảnh báo' | 'Nguy hiểm';
+  status: 'compliant' | 'warning' | 'critical';
   user: string;
-  site: string;
-  nfcVerified: boolean;
   notes?: string;
 }
 
-const initialRecords: TempRecord[] = [
+const initialTempLogs: TempLog[] = [
   { 
-    id: 'TR-1082', 
-    equipment: 'Kho Đông Sâu #1', 
-    equipmentType: 'freezer',
-    temp: -19.2, 
-    time: new Date(Date.now() - 1000 * 60 * 15).toISOString(), 
-    status: 'OK', 
-    user: 'Võ Thị Hương (Nhân viên)',
-    site: 'Nhà hàng Phố Cổ',
-    nfcVerified: true,
-    notes: 'Quạt dàn lạnh chạy ổn định'
+    id: 'TEMP-101', 
+    equipment: 'Kho đông sâu thịt tươi #01', 
+    location: 'Tầng hầm B1 - Kho lạnh trung tâm', 
+    category: 'freezer', 
+    temp: -18.5, 
+    minAllowed: -22, 
+    maxAllowed: -18, 
+    time: new Date().toISOString(), 
+    status: 'compliant', 
+    user: 'Nguyễn Văn A' 
   },
   { 
-    id: 'TR-1081', 
-    equipment: 'Tủ Mát Salad & Sơ Chế', 
-    equipmentType: 'chiller',
-    temp: 5.8, 
-    time: new Date(Date.now() - 1000 * 60 * 45).toISOString(), 
-    status: 'Cảnh báo', 
-    user: 'Nguyễn Văn An (Bếp phó)',
-    site: 'Nhà hàng Phố Cổ',
-    nfcVerified: true,
-    notes: 'Vừa mở cửa bổ sung nguyên liệu đợt trưa'
+    id: 'TEMP-102', 
+    equipment: 'Tủ mát bảo quản hải sản sashimi', 
+    location: 'Bếp lạnh sashimi - Quầy B', 
+    category: 'chiller', 
+    temp: 6.8, 
+    minAllowed: 0, 
+    maxAllowed: 4, 
+    time: new Date(Date.now() - 1800000).toISOString(), 
+    status: 'critical', 
+    user: 'Trần Thị B',
+    notes: 'Nhiệt độ vượt ngưỡng 4°C. Đã lập lệnh chuyển kho dự phòng.'
   },
   { 
-    id: 'TR-1080', 
-    equipment: 'Bể Giữ Nóng Món Ăn (Buffet)', 
-    equipmentType: 'hot_holding',
-    temp: 68.5, 
-    time: new Date(Date.now() - 1000 * 60 * 90).toISOString(), 
-    status: 'OK', 
-    user: 'Phạm Minh Đức',
-    site: 'Khách sạn Sài Gòn Riverside',
-    nfcVerified: false,
-    notes: 'Đạt giới hạn tới hạn CCP2 (>= 63°C)'
+    id: 'TEMP-103', 
+    equipment: 'Tủ mát trưng bày rau salad', 
+    location: 'Bếp lạnh sơ chế', 
+    category: 'chiller', 
+    temp: 3.2, 
+    minAllowed: 0, 
+    maxAllowed: 4, 
+    time: new Date(Date.now() - 3600000).toISOString(), 
+    status: 'compliant', 
+    user: 'Phạm Thuỳ Dung' 
   },
   { 
-    id: 'TR-1079', 
-    equipment: 'Chảo Chiên Ngập Dầu', 
-    equipmentType: 'cooking',
-    temp: 172.0, 
-    time: new Date(Date.now() - 1000 * 60 * 150).toISOString(), 
-    status: 'OK', 
-    user: 'Lê Hoàng Nam (Bếp trưởng)',
-    site: 'Nhà hàng Phố Cổ',
-    nfcVerified: true,
+    id: 'TEMP-104', 
+    equipment: 'Bếp chiên nhúng gà giòn #02', 
+    location: 'Bếp nóng Á', 
+    category: 'cooking', 
+    temp: 178.5, 
+    minAllowed: 175, 
+    maxAllowed: 190, 
+    time: new Date(Date.now() - 5400000).toISOString(), 
+    status: 'compliant', 
+    user: 'Lê Văn C' 
   },
   { 
-    id: 'TR-1078', 
-    equipment: 'Tủ Trữ Thịt Tươi Sống #2', 
-    equipmentType: 'chiller',
-    temp: 7.4, 
-    time: new Date(Date.now() - 1000 * 60 * 240).toISOString(), 
-    status: 'Nguy hiểm', 
-    user: 'Đặng Quốc Bảo (Thanh tra)',
-    site: 'Bếp Trung Tâm Quận 1',
-    nfcVerified: true,
-    notes: 'Vượt giới hạn 2°C! Đã lập phiếu CAPA-2026-001'
+    id: 'TEMP-105', 
+    equipment: 'Tủ giữ nóng canh súp buffet', 
+    location: 'Quầy phục vụ khách tầng 1', 
+    category: 'holding', 
+    temp: 68.0, 
+    minAllowed: 60, 
+    maxAllowed: 85, 
+    time: new Date(Date.now() - 7200000).toISOString(), 
+    status: 'compliant', 
+    user: 'Hoàng Anh Tuấn' 
+  },
+  { 
+    id: 'TEMP-106', 
+    equipment: 'Kho đông lạnh kem & bơ sữa', 
+    location: 'Kho tầng hầm B1', 
+    category: 'freezer', 
+    temp: -16.2, 
+    minAllowed: -22, 
+    maxAllowed: -18, 
+    time: new Date(Date.now() - 9000000).toISOString(), 
+    status: 'warning', 
+    user: 'Ngô Thanh Hà',
+    notes: 'Đang trong chu kỳ xả đá tự động định kỳ'
   },
 ];
 
 export default function TemperaturePage() {
-  const [records, setRecords] = useState<TempRecord[]>(initialRecords);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'OK' | 'Cảnh báo' | 'Nguy hiểm'>('all');
-  const [search, setSearch] = useState('');
+  const [logs, setLogs] = useState<TempLog[]>(initialTempLogs);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // New record form
-  const [newEntry, setNewEntry] = useState({
-    equipment: 'Kho Đông Sâu #1',
-    temp: -18.0,
-    site: 'Nhà hàng Phố Cổ',
+  // New form
+  const [form, setForm] = useState({
+    equipment: '',
+    location: '',
+    category: 'chiller' as TempLog['category'],
+    temp: '',
     notes: '',
-    nfcVerified: true,
   });
 
-  const determineStatus = (equipment: string, temp: number): 'OK' | 'Cảnh báo' | 'Nguy hiểm' => {
-    if (equipment.includes('Kho Đông') || equipment.includes('Tủ Đông')) {
-      if (temp <= -18) return 'OK';
-      if (temp <= -15) return 'Cảnh báo';
-      return 'Nguy hiểm';
-    }
-    if (equipment.includes('Mát') || equipment.includes('Trữ')) {
-      if (temp >= 0 && temp <= 4) return 'OK';
-      if (temp <= 6) return 'Cảnh báo';
-      return 'Nguy hiểm';
-    }
-    if (equipment.includes('Nóng') || equipment.includes('Buffet')) {
-      if (temp >= 63) return 'OK';
-      if (temp >= 58) return 'Cảnh báo';
-      return 'Nguy hiểm';
-    }
-    return 'OK';
-  };
-
-  const handleAddRecord = (e: React.FormEvent) => {
+  const handleCreateRecord = (e: React.FormEvent) => {
     e.preventDefault();
-    const tempNum = Number(newEntry.temp);
-    const calculatedStatus = determineStatus(newEntry.equipment, tempNum);
+    if (!form.equipment || !form.temp) return;
 
-    const created: TempRecord = {
-      id: `TR-${Math.floor(1000 + Math.random() * 9000)}`,
-      equipment: newEntry.equipment,
-      equipmentType: newEntry.equipment.includes('Đông') ? 'freezer' : newEntry.equipment.includes('Nóng') ? 'hot_holding' : 'chiller',
-      temp: tempNum,
+    const val = parseFloat(form.temp);
+    let minAllowed = 0;
+    let maxAllowed = 4;
+    let status: TempLog['status'] = 'compliant';
+
+    if (form.category === 'freezer') {
+      minAllowed = -22;
+      maxAllowed = -18;
+      if (val > -18) status = val > -15 ? 'critical' : 'warning';
+    } else if (form.category === 'chiller') {
+      minAllowed = 0;
+      maxAllowed = 4;
+      if (val > 4 || val < 0) status = val > 6 ? 'critical' : 'warning';
+    } else if (form.category === 'cooking') {
+      minAllowed = 175;
+      maxAllowed = 190;
+      if (val < 175) status = 'warning';
+    } else if (form.category === 'holding') {
+      minAllowed = 60;
+      maxAllowed = 85;
+      if (val < 60) status = 'critical';
+    }
+
+    const newRecord: TempLog = {
+      id: `TEMP-${Date.now().toString().slice(-4)}`,
+      equipment: form.equipment,
+      location: form.location || 'Khu chế biến trung tâm',
+      category: form.category,
+      temp: val,
+      minAllowed,
+      maxAllowed,
       time: new Date().toISOString(),
-      status: calculatedStatus,
-      user: 'Nguyễn Văn An (Bạn)',
-      site: newEntry.site,
-      nfcVerified: newEntry.nfcVerified,
-      notes: newEntry.notes,
+      status,
+      user: 'Nguyễn Văn A (Đã đăng nhập)',
+      notes: form.notes,
     };
 
-    setRecords([created, ...records]);
+    setLogs([newRecord, ...logs]);
     setIsModalOpen(false);
-    setNewEntry({
-      equipment: 'Kho Đông Sâu #1',
-      temp: -18.0,
-      site: 'Nhà hàng Phố Cổ',
+    setForm({
+      equipment: '',
+      location: '',
+      category: 'chiller',
+      temp: '',
       notes: '',
-      nfcVerified: true,
     });
   };
 
-  const filteredRecords = records.filter(r => {
-    const matchesFilter = filterStatus === 'all' || r.status === filterStatus;
-    const matchesSearch = r.equipment.toLowerCase().includes(search.toLowerCase()) || 
-                          r.user.toLowerCase().includes(search.toLowerCase()) ||
-                          r.site.toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesSearch;
+  const filteredLogs = logs.filter(item => {
+    const matchesSearch = 
+      item.equipment.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.location.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCat = categoryFilter === 'all' || item.category === categoryFilter;
+    return matchesSearch && matchesCat;
   });
 
+  const totalLogs = logs.length;
+  const compliantCount = logs.filter(l => l.status === 'compliant').length;
+  const warningCount = logs.filter(l => l.status === 'warning' || l.status === 'critical').length;
+  const complianceRate = Math.round((compliantCount / totalLogs) * 100);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-3xl font-bold tracking-tight text-white">Ghi Nhận Nhiệt Độ CCP</h2>
-            <Badge variant="outline" className="text-orange-400 border-orange-500/30 bg-orange-500/10">
-              Điểm Kiểm Soát Tới Hạn (CCP1)
-            </Badge>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20">
+            <Thermometer className="w-6 h-6" />
           </div>
-          <p className="text-slate-400 text-sm mt-1">
-            Giám sát nhiệt độ chuỗi lạnh và nhiệt độ nấu nướng theo thời gian thực chuẩn HACCP
-          </p>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Ghi Nhận Nhiệt Độ Thiết Bị</h1>
+            <p className="text-slate-400 text-sm mt-0.5">Giám sát các điểm kiểm soát tới hạn (CCP-2 & CCP-3), kho lạnh sâu, tủ mát và quầy giữ nóng</p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button onClick={() => setIsModalOpen(true)} className="gap-2 shadow-lg shadow-orange-950 bg-orange-600 hover:bg-orange-500 text-white">
-            <Plus className="w-4 h-4" />
-            Đo nhiệt độ mới
-          </Button>
-        </div>
+        <Button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2 shadow-lg shadow-indigo-600/25"
+        >
+          <Plus className="w-4 h-4" />
+          Ghi Nhận Mới
+        </Button>
       </div>
 
-      {/* KPI Overview */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="glassmorphism">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-400">Tổng lượt đo hợp lệ</p>
-              <h3 className="text-2xl font-bold text-white mt-1">
-                {records.filter(r => r.status === 'OK').length} / {records.length}
-              </h3>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="glassmorphism border-indigo-500/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-300">Lượt kiểm tra hôm nay</CardTitle>
+            <Thermometer className="w-4 h-4 text-indigo-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{totalLogs}</div>
+            <p className="text-xs text-slate-400 mt-1">Chu kỳ định kỳ 2 giờ/lần</p>
           </CardContent>
         </Card>
 
-        <Card className="glassmorphism">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-400">Cảnh báo chênh lệch</p>
-              <h3 className="text-2xl font-bold text-amber-400 mt-1">
-                {records.filter(r => r.status === 'Cảnh báo').length} cảnh báo
-              </h3>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
+        <Card className="glassmorphism border-emerald-500/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-300">Tỷ lệ trong ngưỡng an toàn</CardTitle>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-400">{complianceRate}%</div>
+            <p className="text-xs text-slate-400 mt-1">{compliantCount} thiết bị đạt chuẩn HACCP</p>
           </CardContent>
         </Card>
 
-        <Card className="glassmorphism border-rose-500/30">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-rose-400">Vi phạm tới hạn (CAPA)</p>
-              <h3 className="text-2xl font-bold text-rose-400 mt-1">
-                {records.filter(r => r.status === 'Nguy hiểm').length} vi phạm
-              </h3>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
+        <Card className="glassmorphism border-red-500/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-300">Cảnh báo lệch chuẩn</CardTitle>
+            <AlertTriangle className="w-4 h-4 text-red-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-400">{warningCount}</div>
+            <p className="text-xs text-red-400/80 mt-1">Cần khắc phục kịp thời</p>
+          </CardContent>
+        </Card>
+
+        <Card className="glassmorphism border-slate-700/60">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-300">Kênh đo tự động (IoT)</CardTitle>
+            <ShieldCheck className="w-4 h-4 text-slate-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-slate-200">100% Online</div>
+            <p className="text-xs text-emerald-400 mt-1">Cảm biến IoT đồng bộ thời gian thực</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Input 
-            placeholder="Tìm theo thiết bị, nhân viên, cơ sở..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            icon={<Search className="w-4 h-4 text-slate-400" />}
-            className="bg-slate-900 border-slate-800"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-          <Button 
-            size="sm" 
-            variant={filterStatus === 'all' ? 'primary' : 'outline'}
-            onClick={() => setFilterStatus('all')}
-          >
-            Tất cả
-          </Button>
-          <Button 
-            size="sm" 
-            variant={filterStatus === 'OK' ? 'primary' : 'outline'}
-            onClick={() => setFilterStatus('OK')}
-          >
-            Đạt chuẩn
-          </Button>
-          <Button 
-            size="sm" 
-            variant={filterStatus === 'Cảnh báo' ? 'primary' : 'outline'}
-            onClick={() => setFilterStatus('Cảnh báo')}
-          >
-            Cảnh báo
-          </Button>
-          <Button 
-            size="sm" 
-            variant={filterStatus === 'Nguy hiểm' ? 'primary' : 'outline'}
-            onClick={() => setFilterStatus('Nguy hiểm')}
-          >
-            Nguy hiểm
-          </Button>
-        </div>
-      </div>
-
-      {/* Table Card */}
       <Card className="glassmorphism">
-        <CardContent className="p-0">
-          <div className="rounded-xl overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-slate-900/80 text-slate-300 border-b border-slate-800">
-                <tr>
-                  <th className="px-6 py-4 font-semibold">Mã / Thiết Bị</th>
-                  <th className="px-6 py-4 font-semibold">Nhiệt Độ Đo</th>
-                  <th className="px-6 py-4 font-semibold">Xác Thực NFC</th>
-                  <th className="px-6 py-4 font-semibold">Thời Gian Đo</th>
-                  <th className="px-6 py-4 font-semibold">Nhân Sự / Cơ Sở</th>
-                  <th className="px-6 py-4 font-semibold">Trạng Thái</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {filteredRecords.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-white">{row.equipment}</div>
-                      <div className="text-xs font-mono text-slate-500 mt-0.5">{row.id}</div>
-                      {row.notes && (
-                        <p className="text-[11px] text-slate-400 mt-1 italic">"{row.notes}"</p>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 font-bold text-base font-mono">
-                      <span className={
-                        row.status === 'OK' ? 'text-emerald-400' :
-                        row.status === 'Cảnh báo' ? 'text-amber-400' : 'text-rose-400'
-                      }>
-                        {formatTemperature(row.temp)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-xs">
-                      {row.nfcVerified ? (
-                        <span className="flex items-center gap-1.5 text-cyan-400 font-medium">
-                          <Radio className="w-3.5 h-3.5" />
-                          Đã quét NFC
-                        </span>
-                      ) : (
-                        <span className="text-slate-500">Nhập thủ công</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-xs text-slate-400">
-                      {formatDate(row.time)}
-                    </td>
-                    <td className="px-6 py-4 text-xs">
-                      <div className="text-white font-medium">{row.user}</div>
-                      <div className="text-slate-400 mt-0.5">{row.site}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {row.status === 'OK' && <Badge variant="success">Đạt chuẩn</Badge>}
-                      {row.status === 'Cảnh báo' && <Badge variant="warning">Cảnh báo</Badge>}
-                      {row.status === 'Nguy hiểm' && <Badge variant="danger">Vi phạm CCP</Badge>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+            <div className="w-full md:w-96">
+              <Input
+                placeholder="Tìm theo thiết bị, vị trí, người đo..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                icon={<Search className="w-4 h-4" />}
+                className="bg-slate-900/60 border-slate-700/60"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs text-slate-400 mr-1 flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5" /> Thiết bị:
+              </span>
+              <button
+                onClick={() => setCategoryFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  categoryFilter === 'all' 
+                    ? 'bg-indigo-600 text-white shadow-sm' 
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                Tất cả ({logs.length})
+              </button>
+              <button
+                onClick={() => setCategoryFilter('freezer')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1 ${
+                  categoryFilter === 'freezer' 
+                    ? 'bg-indigo-600 text-white shadow-sm' 
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Snowflake className="w-3 h-3 text-sky-400" /> Kho đông (≤ -18°C)
+              </button>
+              <button
+                onClick={() => setCategoryFilter('chiller')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  categoryFilter === 'chiller' 
+                    ? 'bg-indigo-600 text-white shadow-sm' 
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                Tủ mát (0-4°C)
+              </button>
+              <button
+                onClick={() => setCategoryFilter('cooking')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1 ${
+                  categoryFilter === 'cooking' 
+                    ? 'bg-indigo-600 text-white shadow-sm' 
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Flame className="w-3 h-3 text-orange-400" /> Nấu chín / Chiên
+              </button>
+              <button
+                onClick={() => setCategoryFilter('holding')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  categoryFilter === 'holding' 
+                    ? 'bg-indigo-600 text-white shadow-sm' 
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                Giữ nóng (&gt;60°C)
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Add Temperature Record Modal */}
+      {/* Main Table */}
+      <Card className="glassmorphism overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-900/80 text-slate-300 border-b border-slate-800">
+              <tr>
+                <th className="px-6 py-4 font-semibold">Thiết Bị & Vị Trí</th>
+                <th className="px-6 py-4 font-semibold">Nhiệt Độ Thực Tế</th>
+                <th className="px-6 py-4 font-semibold">Ngưỡng An Toàn (CCP)</th>
+                <th className="px-6 py-4 font-semibold">Thời Gian Ghi Nhận</th>
+                <th className="px-6 py-4 font-semibold">Người Đo</th>
+                <th className="px-6 py-4 font-semibold">Trạng Thái</th>
+                <th className="px-6 py-4 font-semibold text-right">Khắc Phục</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/80">
+              {filteredLogs.map((row) => (
+                <tr key={row.id} className="hover:bg-slate-800/40 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        row.status === 'compliant' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                        row.status === 'warning' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                        'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}>
+                        <Thermometer className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white">{row.equipment}</div>
+                        <div className="text-xs text-slate-400 mt-0.5">{row.location}</div>
+                        {row.notes && (
+                          <div className="text-[11px] text-amber-400 italic mt-0.5">"{row.notes}"</div>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <span className={`text-base font-bold font-mono ${
+                      row.status === 'compliant' ? 'text-emerald-400' :
+                      row.status === 'warning' ? 'text-amber-400' : 'text-red-400'
+                    }`}>
+                      {formatTemperature(row.temp)}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                    {row.minAllowed}°C đến {row.maxAllowed}°C
+                  </td>
+
+                  <td className="px-6 py-4 text-xs text-slate-300">
+                    {formatDate(row.time)}
+                  </td>
+
+                  <td className="px-6 py-4 text-xs text-slate-300">
+                    {row.user}
+                  </td>
+
+                  <td className="px-6 py-4">
+                    {row.status === 'compliant' && <Badge variant="success">Đạt chuẩn</Badge>}
+                    {row.status === 'warning' && <Badge variant="warning">Cảnh báo</Badge>}
+                    {row.status === 'critical' && <Badge variant="destructive">Vi phạm CCP</Badge>}
+                  </td>
+
+                  <td className="px-6 py-4 text-right">
+                    {row.status !== 'compliant' ? (
+                      <Link href="/corrective-actions">
+                        <Button size="sm" variant="secondary" className="bg-red-500/20 text-red-300 hover:bg-red-500/30 text-xs border border-red-500/30">
+                          Tạo CAPA →
+                        </Button>
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-emerald-400 font-semibold">Tốt</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Modal: Add Record */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Thermometer className="w-5 h-5 text-orange-400" />
-                Ghi Nhận Nhiệt Độ Thiết Bị Mới
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title="Thêm Bản Ghi Nhiệt Độ Mới (Kiểm Tra CCP)"
+        >
+          <form onSubmit={handleCreateRecord} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-300">Tên thiết bị / Vị trí đo *</label>
+              <Input
+                placeholder="VD: Tủ Mát Hải Sản Sashimi #02"
+                value={form.equipment}
+                onChange={(e) => setForm({ ...form, equipment: e.target.value })}
+                required
+              />
             </div>
 
-            <form onSubmit={handleAddRecord} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Thiết bị giám sát *</label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Loại kiểm soát</label>
                 <select
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                  value={newEntry.equipment}
-                  onChange={(e) => setNewEntry({ ...newEntry, equipment: e.target.value })}
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value as any })}
+                  className="flex h-9 w-full rounded-md border border-slate-700 bg-slate-900/50 px-3 py-1 text-sm text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
                 >
-                  <option value="Kho Đông Sâu #1">Kho Đông Sâu #1 (Chuẩn: ≤ -18°C)</option>
-                  <option value="Tủ Mát Salad & Sơ Chế">Tủ Mát Salad & Sơ Chế (Chuẩn: 0°C đến 4°C)</option>
-                  <option value="Tủ Trữ Thịt Tươi Sống #2">Tủ Trữ Thịt Tươi Sống #2 (Chuẩn: 0°C đến 2°C)</option>
-                  <option value="Bể Giữ Nóng Món Ăn (Buffet)">Bể Giữ Nóng Món Ăn (Buffet) (Chuẩn: ≥ 63°C)</option>
-                  <option value="Chảo Chiên Ngập Dầu">Chảo Chiên Ngập Dầu (Chuẩn: 160°C - 180°C)</option>
+                  <option value="chiller">Tủ mát (0°C đến 4°C)</option>
+                  <option value="freezer">Kho đông sâu (≤ -18°C)</option>
+                  <option value="cooking">Nấu chín / Bếp chiên (≥ 75°C / 175°C)</option>
+                  <option value="holding">Giữ nóng buffet (≥ 60°C)</option>
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Nhiệt độ đọc được (°C) *</label>
-                <Input 
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Nhiệt độ đo được (°C) *</label>
+                <Input
                   type="number"
                   step="0.1"
-                  value={newEntry.temp}
-                  onChange={(e) => setNewEntry({ ...newEntry, temp: parseFloat(e.target.value) || 0 })}
-                  className="text-lg font-bold font-mono"
+                  placeholder="VD: 3.2 hoặc -18.5"
+                  value={form.temp}
+                  onChange={(e) => setForm({ ...form, temp: e.target.value })}
                   required
                 />
               </div>
+            </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Cơ sở hoạt động</label>
-                <select
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                  value={newEntry.site}
-                  onChange={(e) => setNewEntry({ ...newEntry, site: e.target.value })}
-                >
-                  <option value="Nhà hàng Phố Cổ">Nhà hàng Phố Cổ (Trụ sở)</option>
-                  <option value="Khách sạn Sài Gòn Riverside">Khách sạn Sài Gòn Riverside</option>
-                  <option value="Bếp Trung Tâm Quận 1">Bếp Trung Tâm Quận 1</option>
-                </select>
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-300">Khu vực / Phòng</label>
+              <Input
+                placeholder="VD: Bếp Âu tầng 1"
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+              />
+            </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Ghi chú quan sát cảm quan</label>
-                <Input 
-                  placeholder="VD: Không đọng đá, gioăng khít..."
-                  value={newEntry.notes}
-                  onChange={(e) => setNewEntry({ ...newEntry, notes: e.target.value })}
-                />
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-300">Ghi chú hiện trường</label>
+              <Input
+                placeholder="Tình trạng thực phẩm, đóng kín cửa tủ..."
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              />
+            </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <input 
-                  type="checkbox"
-                  id="nfcCheck"
-                  checked={newEntry.nfcVerified}
-                  onChange={(e) => setNewEntry({ ...newEntry, nfcVerified: e.target.checked })}
-                  className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
-                />
-                <label htmlFor="nfcCheck" className="text-xs text-slate-300 cursor-pointer">
-                  Xác nhận đã quét thẻ NFC gắn tại thiết bị
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                  Hủy
-                </Button>
-                <Button type="submit" variant="primary" className="bg-orange-600 hover:bg-orange-500">
-                  Lưu số đo nhiệt độ
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white">
+                Lưu Nhật Ký Nhiệt Độ
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

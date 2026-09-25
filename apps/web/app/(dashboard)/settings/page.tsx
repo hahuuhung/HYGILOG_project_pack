@@ -1,220 +1,295 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { 
   Settings, 
+  Building, 
   Thermometer, 
   Bell, 
-  Building2, 
   ShieldCheck, 
   Save, 
-  CheckCircle2,
+  CheckCircle2, 
+  RefreshCw, 
+  Sliders, 
+  Smartphone,
   Lock,
-  Smartphone
+  Mail,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'haccp' | 'alerts' | 'org' | 'security'>('haccp');
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [activeTab, setActiveTab] = useState<'org' | 'ccp' | 'alerts' | 'sync'>('ccp');
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedToast, setSavedToast] = useState(false);
 
   // Form states
-  const [haccpLimits, setHaccpLimits] = useState({
-    frozenMax: -18,
-    chilledMeatMax: 2,
-    chilledSaladMax: 4,
-    hotHoldingMin: 63,
-    fryerOilMin: 160,
-    fryerOilMax: 185,
-    maxDeviationMinutes: 15,
+  const [orgData, setOrgData] = useState({
+    name: 'TẬP ĐOÀN ẨM THỰC HYGILOG HOSPITALITY VIỆT NAM',
+    taxCode: '0318294719',
+    legalRep: 'Nguyễn Văn A',
+    address: 'Tầng 77, Tòa nhà Vinpearl Landmark 81, Quận Bình Thạnh, TP.HCM',
+    phone: '1900 6868',
+    email: 'contact@hygilog.vn',
+    haccpCertNumber: 'HACCP-CODEX-2025-VN88',
+  });
+
+  const [ccpThresholds, setCcpThresholds] = useState({
+    freezerMin: '-22',
+    freezerMax: '-18',
+    chillerMin: '0',
+    chillerMax: '4',
+    produceMin: '4',
+    produceMax: '8',
+    hotHoldingMin: '60',
+    hotHoldingMax: '85',
+    coreCookingMin: '75',
+    maxDeviationMinutes: '15',
   });
 
   const [alertSettings, setAlertSettings] = useState({
     emailAlerts: true,
-    telegramBot: true,
-    zaloNotification: false,
-    alertEmail: 'safety-alerts@hygilog.vn',
-    telegramChatId: '-100238491823',
+    smsUrgent: true,
+    pushMobile: true,
+    soundAlarmKitchen: true,
+    alertEmails: 'manager.lm81@hygilog.vn, chef.qa@hygilog.vn',
   });
 
-  const [orgProfile, setOrgProfile] = useState({
-    orgName: 'Công ty Cổ phần Ẩm thực HYGILOG Việt Nam',
-    taxCode: '0318928374',
-    foodLicenseNumber: 'ATTP-HCM-2026/0491',
-    licenseExpiry: '2029-08-15',
-    address: 'Số 18 Hàng Bè, Hoàn Kiếm, Hà Nội',
-    representative: 'Nguyễn Văn An',
+  const [syncSettings, setSyncSettings] = useState({
+    syncIntervalSeconds: '60',
+    sampleRetentionHours: '24',
+    offlineStorageDays: '30',
+    requireNfcConfirmation: true,
   });
 
-  const handleSave = () => {
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 3500);
+    }, 600);
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-white">Cài Đặt Hệ Thống</h2>
-          <p className="text-slate-400 text-sm mt-1">
-            Thiết lập ngưỡng tới hạn CCP, cấu hình thông báo cảnh báo và hồ sơ pháp lý ATTP
-          </p>
-        </div>
-
-        <Button onClick={handleSave} className="gap-2 shadow-lg shadow-indigo-950">
-          <Save className="w-4 h-4" />
-          Lưu cấu hình
-        </Button>
-      </div>
-
-      {/* Save Success Banner */}
-      {saveSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-300 text-xs">
-          <CheckCircle2 className="w-5 h-5 shrink-0" />
-          <span>Đã cập nhật cấu hình hệ thống thành công! Dữ liệu đã đồng bộ tới các thiết bị máy tính bảng và điện thoại ca trực.</span>
+    <div className="space-y-6 animate-slide-in">
+      {/* Toast Feedback */}
+      {savedToast && (
+        <div className="fixed top-20 right-6 z-50 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-emerald-400/40 animate-slide-in">
+          <CheckCircle2 className="w-5 h-5 text-emerald-200" />
+          <span className="text-sm font-medium">Đã cập nhật và lưu cấu hình hệ thống HACCP thành công!</span>
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-slate-800 text-slate-300 border border-slate-700">
+            <Settings className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Cấu Hình Hệ Thống & Chuẩn HACCP</h1>
+            <p className="text-slate-400 text-sm mt-0.5">Thiết lập ngưỡng nhiệt độ giới hạn tới hạn CCP, chính sách thông báo sự cố và thông tin tổ chức</p>
+          </div>
+        </div>
+
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2 shadow-lg shadow-indigo-600/25"
+        >
+          {isSaving ? (
+            <RefreshCw className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          Lưu Tất Cả Thiết Lập
+        </Button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex rounded-xl bg-slate-900/80 p-1.5 border border-slate-800 gap-1 overflow-x-auto">
         <button
-          onClick={() => setActiveTab('haccp')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === 'haccp' 
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/40' 
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          onClick={() => setActiveTab('ccp')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+            activeTab === 'ccp' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
           }`}
         >
           <Thermometer className="w-4 h-4" />
-          Ngưỡng nhiệt độ CCP
+          Ngưỡng Giới Hạn Tới Hạn (CCP Limits)
         </button>
 
         <button
           onClick={() => setActiveTab('alerts')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === 'alerts' 
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/40' 
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+            activeTab === 'alerts' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
           }`}
         >
           <Bell className="w-4 h-4" />
-          Cảnh báo & Khẩn cấp
+          Cảnh Báo & Thông Báo Khẩn
+        </button>
+
+        <button
+          onClick={() => setActiveTab('sync')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+            activeTab === 'sync' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Smartphone className="w-4 h-4" />
+          Quy Chuẩn Đồng Bộ & Lưu Mẫu
         </button>
 
         <button
           onClick={() => setActiveTab('org')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === 'org' 
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/40' 
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+            activeTab === 'org' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
           }`}
         >
-          <Building2 className="w-4 h-4" />
-          Hồ sơ Pháp nhân & ATTP
-        </button>
-
-        <button
-          onClick={() => setActiveTab('security')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === 'security' 
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/40' 
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-          }`}
-        >
-          <Lock className="w-4 h-4" />
-          Bảo mật & Phiên làm việc
+          <Building className="w-4 h-4" />
+          Hồ Sơ Doanh Nghiệp & Pháp Lý
         </button>
       </div>
 
-      {/* Tab 1: HACCP Limits */}
-      {activeTab === 'haccp' && (
+      {/* Tab 1: CCP Limits */}
+      {activeTab === 'ccp' && (
         <Card className="glassmorphism">
           <CardHeader>
-            <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-              <Thermometer className="w-5 h-5 text-orange-400" />
-              Tiêu Chuẩn Giới Hạn Tới Hạn (CCP Critical Limits)
-            </CardTitle>
-            <CardDescription className="text-slate-400 text-xs">
-              Hệ thống sẽ kích hoạt còi cảnh báo và tạo sự cố CAPA tự động khi thông số đo lường vượt khỏi các ngưỡng này
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Ngưỡng Kiểm Soát Nhiệt Độ Tiêu Chuẩn Quốc Tế HACCP</CardTitle>
+                <CardDescription>
+                  Khi nhiệt độ thiết bị nằm ngoài phạm vi này, hệ thống sẽ tự động kích hoạt trạng thái Cảnh Báo và tạo phiếu sự cố CAPA
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">
+                Codex Alimentarius
+              </Badge>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5 p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-                <label className="text-xs font-semibold text-white">Kho đông sâu thực phẩm (°C)</label>
-                <p className="text-[11px] text-slate-400">Ngưỡng tối đa cho phép bảo quản đông lạnh</p>
-                <div className="flex items-center gap-2 pt-1">
-                  <Input 
-                    type="number" 
-                    value={haccpLimits.frozenMax}
-                    onChange={(e) => setHaccpLimits({ ...haccpLimits, frozenMax: parseFloat(e.target.value) || 0 })}
-                    className="max-w-[120px]"
-                  />
-                  <span className="text-xs text-slate-400">°C (Chuẩn: ≤ -18°C)</span>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Kho đông */}
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white text-sm">Kho Đông Sâu (Deep Freezer)</span>
+                  <Badge variant="secondary">Thịt & Thủy sản</Badge>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400">Nhiệt độ tối thiểu (°C)</label>
+                    <Input
+                      type="number"
+                      value={ccpThresholds.freezerMin}
+                      onChange={(e) => setCcpThresholds({ ...ccpThresholds, freezerMin: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400">Nhiệt độ tối đa (°C)</label>
+                    <Input
+                      type="number"
+                      value={ccpThresholds.freezerMax}
+                      onChange={(e) => setCcpThresholds({ ...ccpThresholds, freezerMax: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500">Tiêu chuẩn khuyến nghị: Giữ ổn định ở mức ≤ -18.0°C</p>
               </div>
 
-              <div className="space-y-1.5 p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-                <label className="text-xs font-semibold text-white">Tủ mát trữ thịt & hải sản tươi sống (°C)</label>
-                <p className="text-[11px] text-slate-400">Ngưỡng tối đa bảo quản thịt cá trong ngày</p>
-                <div className="flex items-center gap-2 pt-1">
-                  <Input 
-                    type="number" 
-                    value={haccpLimits.chilledMeatMax}
-                    onChange={(e) => setHaccpLimits({ ...haccpLimits, chilledMeatMax: parseFloat(e.target.value) || 0 })}
-                    className="max-w-[120px]"
-                  />
-                  <span className="text-xs text-slate-400">°C (Chuẩn: 0°C đến +2°C)</span>
+              {/* Tủ mát thực phẩm */}
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white text-sm">Tủ Mát Thực Phẩm & Sữa (Chiller)</span>
+                  <Badge variant="secondary">Sơ chế & Trưng bày</Badge>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400">Nhiệt độ tối thiểu (°C)</label>
+                    <Input
+                      type="number"
+                      value={ccpThresholds.chillerMin}
+                      onChange={(e) => setCcpThresholds({ ...ccpThresholds, chillerMin: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400">Nhiệt độ tối đa (°C)</label>
+                    <Input
+                      type="number"
+                      value={ccpThresholds.chillerMax}
+                      onChange={(e) => setCcpThresholds({ ...ccpThresholds, chillerMax: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500">Tiêu chuẩn khuyến nghị: 0.0°C đến 4.0°C để ức chế vi khuẩn</p>
               </div>
 
-              <div className="space-y-1.5 p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-                <label className="text-xs font-semibold text-white">Tủ mát salad & bánh ngọt (°C)</label>
-                <p className="text-[11px] text-slate-400">Ngưỡng nhiệt độ mát cho món ăn liền</p>
-                <div className="flex items-center gap-2 pt-1">
-                  <Input 
-                    type="number" 
-                    value={haccpLimits.chilledSaladMax}
-                    onChange={(e) => setHaccpLimits({ ...haccpLimits, chilledSaladMax: parseFloat(e.target.value) || 0 })}
-                    className="max-w-[120px]"
-                  />
-                  <span className="text-xs text-slate-400">°C (Chuẩn: +2°C đến +4°C)</span>
+              {/* Tủ mát rau củ */}
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white text-sm">Kho Rau Củ Quả & Trái Cây</span>
+                  <Badge variant="secondary">Thực vật</Badge>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400">Nhiệt độ tối thiểu (°C)</label>
+                    <Input
+                      type="number"
+                      value={ccpThresholds.produceMin}
+                      onChange={(e) => setCcpThresholds({ ...ccpThresholds, produceMin: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400">Nhiệt độ tối đa (°C)</label>
+                    <Input
+                      type="number"
+                      value={ccpThresholds.produceMax}
+                      onChange={(e) => setCcpThresholds({ ...ccpThresholds, produceMax: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500">Tiêu chuẩn khuyến nghị: 4.0°C đến 8.0°C tránh dập nát do đông đá</p>
               </div>
 
-              <div className="space-y-1.5 p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-                <label className="text-xs font-semibold text-white">Giữ ấm món nóng (Hot Holding CCP2)</label>
-                <p className="text-[11px] text-slate-400">Nhiệt độ tối thiểu duy trì trên quầy buffet</p>
-                <div className="flex items-center gap-2 pt-1">
-                  <Input 
-                    type="number" 
-                    value={haccpLimits.hotHoldingMin}
-                    onChange={(e) => setHaccpLimits({ ...haccpLimits, hotHoldingMin: parseFloat(e.target.value) || 0 })}
-                    className="max-w-[120px]"
-                  />
-                  <span className="text-xs text-slate-400">°C (Chuẩn: ≥ +63°C)</span>
+              {/* Giữ nóng thực phẩm */}
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white text-sm">Quầy Giữ Nóng & Buffet (Hot Holding)</span>
+                  <Badge variant="secondary">Thức ăn chín</Badge>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400">Nhiệt độ tối thiểu (°C)</label>
+                    <Input
+                      type="number"
+                      value={ccpThresholds.hotHoldingMin}
+                      onChange={(e) => setCcpThresholds({ ...ccpThresholds, hotHoldingMin: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400">Nhiệt độ tối đa (°C)</label>
+                    <Input
+                      type="number"
+                      value={ccpThresholds.hotHoldingMax}
+                      onChange={(e) => setCcpThresholds({ ...ccpThresholds, hotHoldingMax: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500">Bắt buộc giữ trên 60°C để ngăn ngừa vi sinh vật phát triển</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
-              <label className="text-xs font-semibold text-white">Thời gian trễ cho phép khi xả đá tự động (Defrost Delay)</label>
-              <p className="text-[11px] text-slate-400">
-                Khoảng thời gian (phút) thiết bị có thể tăng nhiệt độ khi chu kỳ xả đá tự động chạy trước khi kích hoạt báo động vi phạm
-              </p>
-              <div className="flex items-center gap-2 pt-1">
-                <Input 
-                  type="number" 
-                  value={haccpLimits.maxDeviationMinutes}
-                  onChange={(e) => setHaccpLimits({ ...haccpLimits, maxDeviationMinutes: parseInt(e.target.value) || 0 })}
-                  className="max-w-[120px]"
-                />
-                <span className="text-xs text-slate-400">phút (Khuyến cáo: 15 - 20 phút)</span>
+            {/* Core Cooking Temp */}
+            <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-indigo-300 text-sm">Nhiệt Độ Tâm Khi Nấu Chín (Core Cooking CCP-3)</span>
+                <span className="font-bold text-white text-sm">≥ {ccpThresholds.coreCookingMin}°C</span>
               </div>
+              <p className="text-xs text-slate-400">
+                Thịt gia cầm và thịt xay cần đạt tối thiểu 75°C trong ít nhất 15 giây tại tâm điểm dày nhất trước khi mang ra phục vụ thực khách.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -224,154 +299,166 @@ export default function SettingsPage() {
       {activeTab === 'alerts' && (
         <Card className="glassmorphism">
           <CardHeader>
-            <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-              <Bell className="w-5 h-5 text-indigo-400" />
-              Kênh Thông Báo Cảnh Báo Vi Phạm Khẩn Cấp
-            </CardTitle>
-            <CardDescription className="text-slate-400 text-xs">
-              Gửi thông báo tức thời tới Bếp trưởng và Giám đốc điều hành khi có sự cố nghiêm trọng
-            </CardDescription>
+            <CardTitle className="text-lg">Kênh Thông Báo & Báo Động Khẩn Cấp</CardTitle>
+            <CardDescription>Cấu hình cơ chế cảnh báo khi có sai lệch nhiệt độ hoặc vi phạm checklist nghiêm trọng</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
+          <CardContent className="space-y-5">
+            <div className="space-y-4">
+              <label className="flex items-center justify-between p-4 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
                 <div>
-                  <h4 className="text-xs font-semibold text-white">Thông báo qua Email</h4>
-                  <p className="text-[11px] text-slate-400">Nhận báo cáo vi phạm và bản tin tổng hợp hàng ngày</p>
+                  <span className="text-sm font-semibold text-white block">Thông báo đẩy ứng dụng di động (Push Notification)</span>
+                  <span className="text-xs text-slate-400">Gửi tức thì đến điện thoại của Bếp trưởng, Quản lý ca và Giám sát ATTP</span>
                 </div>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
+                  checked={alertSettings.pushMobile}
+                  onChange={(e) => setAlertSettings({ ...alertSettings, pushMobile: e.target.checked })}
+                  className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-4 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+                <div>
+                  <span className="text-sm font-semibold text-white block">Email báo cáo sự cố tự động</span>
+                  <span className="text-xs text-slate-400">Gửi biên bản sự cố CAPA kèm sơ đồ nhiệt độ lệch chuẩn</span>
+                </div>
+                <input
+                  type="checkbox"
                   checked={alertSettings.emailAlerts}
                   onChange={(e) => setAlertSettings({ ...alertSettings, emailAlerts: e.target.checked })}
-                  className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                  className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500"
                 />
-              </div>
-              {alertSettings.emailAlerts && (
-                <Input 
-                  placeholder="Địa chỉ email nhận cảnh báo"
-                  value={alertSettings.alertEmail}
-                  onChange={(e) => setAlertSettings({ ...alertSettings, alertEmail: e.target.value })}
-                  className="text-xs"
-                />
-              )}
-            </div>
+              </label>
 
-            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
+              <label className="flex items-center justify-between p-4 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
                 <div>
-                  <h4 className="text-xs font-semibold text-white">Telegram Alert Bot (Thời gian thực 0s)</h4>
-                  <p className="text-[11px] text-slate-400">Bắn tin nhắn khẩn cấp vào Group Quản lý Bếp</p>
+                  <span className="text-sm font-semibold text-white block">Tin nhắn SMS khẩn cấp (Sự cố Mức Độ Cao)</span>
+                  <span className="text-xs text-slate-400">Kích hoạt khi kho đông bị mất điện hoặc hỏng máy nén quá 30 phút</span>
                 </div>
-                <input 
-                  type="checkbox" 
-                  checked={alertSettings.telegramBot}
-                  onChange={(e) => setAlertSettings({ ...alertSettings, telegramBot: e.target.checked })}
-                  className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                <input
+                  type="checkbox"
+                  checked={alertSettings.smsUrgent}
+                  onChange={(e) => setAlertSettings({ ...alertSettings, smsUrgent: e.target.checked })}
+                  className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500"
                 />
-              </div>
-              {alertSettings.telegramBot && (
-                <Input 
-                  placeholder="Telegram Group Chat ID (-100...)"
-                  value={alertSettings.telegramChatId}
-                  onChange={(e) => setAlertSettings({ ...alertSettings, telegramChatId: e.target.value })}
-                  className="text-xs font-mono"
-                />
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Tab 3: Organization Profile */}
-      {activeTab === 'org' && (
-        <Card className="glassmorphism">
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-blue-400" />
-              Hồ Sơ Pháp Nhân & Giấy Phép An Toàn Thực Phẩm
-            </CardTitle>
-            <CardDescription className="text-slate-400 text-xs">
-              Thông tin hiển thị trên các biểu mẫu xuất trình cho đoàn kiểm tra liên ngành
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Tên Doanh Nghiệp / Tổ Chức *</label>
-                <Input 
-                  value={orgProfile.orgName}
-                  onChange={(e) => setOrgProfile({ ...orgProfile, orgName: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Mã Số Thuế (MST) *</label>
-                <Input 
-                  value={orgProfile.taxCode}
-                  onChange={(e) => setOrgProfile({ ...orgProfile, taxCode: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Số Giấy Chứng Nhận ĐĐK ATTP</label>
-                <Input 
-                  value={orgProfile.foodLicenseNumber}
-                  onChange={(e) => setOrgProfile({ ...orgProfile, foodLicenseNumber: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Hạn Giấy Phép ATTP</label>
-                <Input 
-                  type="date"
-                  value={orgProfile.licenseExpiry}
-                  onChange={(e) => setOrgProfile({ ...orgProfile, licenseExpiry: e.target.value })}
-                />
-              </div>
+              </label>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-300">Địa chỉ đăng ký kinh doanh</label>
-              <Input 
-                value={orgProfile.address}
-                onChange={(e) => setOrgProfile({ ...orgProfile, address: e.target.value })}
+            <div className="space-y-2 pt-2">
+              <label className="text-xs font-medium text-slate-300">Danh sách Email nhận cảnh báo khẩn (ngăn cách bởi dấu phẩy)</label>
+              <Input
+                value={alertSettings.alertEmails}
+                onChange={(e) => setAlertSettings({ ...alertSettings, alertEmails: e.target.value })}
+                className="bg-slate-900 border-slate-700"
               />
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Tab 4: Security */}
-      {activeTab === 'security' && (
+      {/* Tab 3: Sync & Storage */}
+      {activeTab === 'sync' && (
         <Card className="glassmorphism">
           <CardHeader>
-            <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-              <Lock className="w-5 h-5 text-emerald-400" />
-              Bảo Mật & Phân Quyền Đa Khách Hàng (Multi-Tenant Isolation)
-            </CardTitle>
-            <CardDescription className="text-slate-400 text-xs">
-              Các quy tắc mã hóa token và cách ly dữ liệu giữa các doanh nghiệp
-            </CardDescription>
+            <CardTitle className="text-lg">Quy Chuẩn Đồng Bộ & Lưu Trữ Mẫu</CardTitle>
+            <CardDescription>Đồng bộ dữ liệu đa nền tảng Web ↔ Mobile Offline-first và quy định lưu mẫu 24h</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
-              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
-                <ShieldCheck className="w-4 h-4" />
-                <span>Tenant Isolation Enforced</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                <span className="text-sm font-semibold text-white">Thời gian lưu mẫu thức ăn (Giờ)</span>
+                <p className="text-xs text-slate-400">Quy định pháp luật bắt buộc lưu mẫu thức ăn trong tủ lạnh riêng biệt</p>
+                <Input
+                  type="number"
+                  value={syncSettings.sampleRetentionHours}
+                  onChange={(e) => setSyncSettings({ ...syncSettings, sampleRetentionHours: e.target.value })}
+                />
               </div>
-              <p className="text-xs text-slate-400">
-                Toàn bộ dữ liệu được cách ly tuyệt đối thông qua cơ chế TenantGuard và chỉ mục compound Index MongoDB trên field <code className="text-indigo-400 font-mono">organizationId</code>.
-              </p>
+
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                <span className="text-sm font-semibold text-white">Tần suất đồng bộ nền (Giây)</span>
+                <p className="text-xs text-slate-400">Chu kỳ đẩy dữ liệu offline từ app di động lên đám mây máy chủ</p>
+                <Input
+                  type="number"
+                  value={syncSettings.syncIntervalSeconds}
+                  onChange={(e) => setSyncSettings({ ...syncSettings, syncIntervalSeconds: e.target.value })}
+                />
+              </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-                <p className="text-xs text-slate-400">Thời hạn Access Token</p>
-                <p className="text-base font-bold text-white mt-1">15 phút (JWT HMAC SHA-256)</p>
+            <label className="flex items-center justify-between p-4 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer">
+              <div>
+                <span className="text-sm font-semibold text-white block">Bắt buộc xác thực vị trí bằng thẻ chip NFC</span>
+                <span className="text-xs text-slate-400">Chống gian lận ghi chép từ xa, nhân viên phải chạm thẻ vật lý mới được hoàn tất phiếu</span>
               </div>
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-                <p className="text-xs text-slate-400">Thời hạn Refresh Token</p>
-                <p className="text-base font-bold text-white mt-1">7 ngày (Redis Blacklist Supported)</p>
+              <input
+                type="checkbox"
+                checked={syncSettings.requireNfcConfirmation}
+                onChange={(e) => setSyncSettings({ ...syncSettings, requireNfcConfirmation: e.target.checked })}
+                className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500"
+              />
+            </label>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tab 4: Org Info */}
+      {activeTab === 'org' && (
+        <Card className="glassmorphism">
+          <CardHeader>
+            <CardTitle className="text-lg">Thông Tin Doanh Nghiệp & Hồ Sơ Pháp Lý</CardTitle>
+            <CardDescription>Thông tin xuất hiện trên các biên bản kiểm toán và giấy chứng nhận an toàn thực phẩm</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-300">Tên doanh nghiệp / Đơn vị chủ quản</label>
+              <Input
+                value={orgData.name}
+                onChange={(e) => setOrgData({ ...orgData, name: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Mã số thuế doanh nghiệp</label>
+                <Input
+                  value={orgData.taxCode}
+                  onChange={(e) => setOrgData({ ...orgData, taxCode: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Người đại diện pháp luật</label>
+                <Input
+                  value={orgData.legalRep}
+                  onChange={(e) => setOrgData({ ...orgData, legalRep: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-300">Địa chỉ trụ sở chính</label>
+              <Input
+                value={orgData.address}
+                onChange={(e) => setOrgData({ ...orgData, address: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Hotline hỗ trợ an toàn</label>
+                <Input
+                  value={orgData.phone}
+                  onChange={(e) => setOrgData({ ...orgData, phone: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Số Chứng Nhận Hệ Thống HACCP</label>
+                <Input
+                  value={orgData.haccpCertNumber}
+                  onChange={(e) => setOrgData({ ...orgData, haccpCertNumber: e.target.value })}
+                />
               </div>
             </div>
           </CardContent>

@@ -1,125 +1,149 @@
 'use client';
 
-import { useState } from 'react';
-import { Bell, Search, Building2, Clock, CheckCircle2, ChevronDown, ShieldAlert, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  Bell, 
+  Search, 
+  Building2, 
+  CheckCircle2, 
+  AlertTriangle, 
+  ChevronDown, 
+  Radio, 
+  ShieldCheck,
+  X
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 export function TopBar() {
-  const [selectedSite, setSelectedSite] = useState('all');
-  const [showNotifications, setShowNotifications] = useState(false);
-
-  const notifications = [
+  const [selectedSite, setSelectedSite] = useState('Landmark 81 - Bếp Trung Tâm');
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [unreadAlerts, setUnreadAlerts] = useState([
     {
       id: 1,
-      title: 'Cảnh báo nhiệt độ tủ mát 02',
-      time: '5 phút trước',
-      type: 'warning',
-      desc: 'Nhiệt độ hiện tại 7.5°C vượt ngưỡng an toàn (0°C - 4°C). Cần kiểm tra!',
+      title: 'Tủ mát hải sản #02 vượt ngưỡng 8.2°C',
+      time: '15 phút trước',
+      type: 'critical',
+      href: '/corrective-actions',
     },
     {
       id: 2,
-      title: 'Checklist ca sáng đã phê duyệt',
-      time: '25 phút trước',
-      type: 'success',
-      desc: 'Bếp trưởng Lê Hoàng Nam đã ký duyệt danh mục vệ sinh khu Bếp Nóng.',
-    },
-    {
-      id: 3,
-      title: 'Lô hàng thịt bò Wagyu A4',
-      time: '1 giờ trước',
+      title: 'Kho đông sâu #01 đã hoàn thành xả đá định kỳ',
+      time: '45 phút trước',
       type: 'info',
-      desc: 'Đã nhập kho 45kg từ Nhà cung cấp FreshFood VN, mã lô LOT-2026-0924.',
+      href: '/temperature',
     },
-  ];
+  ]);
 
   return (
-    <header className="h-16 border-b border-slate-800 bg-slate-900/60 backdrop-blur-md flex items-center px-6 justify-between sticky top-0 z-30 shadow-sm">
-      {/* Search Input */}
-      <div className="w-full max-w-sm hidden md:flex items-center gap-2">
-        <div className="relative w-full">
-          <Input 
-            placeholder="Tìm kiếm thiết bị, lô hàng, checklist (Ctrl + K)..." 
-            icon={<Search className="w-4 h-4 text-slate-400" />}
-            className="bg-slate-950/60 border-slate-800 text-xs py-1.5 focus:border-indigo-500/50"
-          />
-        </div>
-      </div>
-      
-      {/* Right Controls */}
-      <div className="flex items-center gap-3 ml-auto">
-        {/* Site Switcher */}
-        <div className="flex items-center gap-2 bg-slate-950/60 border border-slate-800/80 rounded-xl px-3 py-1.5 text-xs text-slate-300">
-          <Building2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-          <select 
-            value={selectedSite} 
+    <div className="h-16 border-b border-slate-800 bg-slate-900/60 backdrop-blur-md flex items-center px-4 sm:px-6 justify-between sticky top-0 z-30 select-none">
+      {/* Left: Quick Site Selector & Live Indicator */}
+      <div className="flex items-center gap-4">
+        {/* Site Switcher Dropdown */}
+        <div className="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/60 text-xs font-semibold text-white">
+          <Building2 className="w-3.5 h-3.5 text-indigo-400" />
+          <select
+            value={selectedSite}
             onChange={(e) => setSelectedSite(e.target.value)}
-            className="bg-transparent border-none text-xs text-white focus:outline-none cursor-pointer"
+            className="bg-transparent border-none text-xs text-white focus:outline-none cursor-pointer pr-1"
           >
-            <option value="all" className="bg-slate-900 text-white">Toàn bộ cơ sở</option>
-            <option value="site_1" className="bg-slate-900 text-white">Nhà hàng Phố Cổ (Trụ sở chính)</option>
-            <option value="site_2" className="bg-slate-900 text-white">Khách sạn Riverside (Chi nhánh 2)</option>
-            <option value="site_3" className="bg-slate-900 text-white">Bếp trung tâm Quận 1</option>
+            <option value="Landmark 81 - Bếp Trung Tâm" className="bg-slate-900 text-white">
+              Landmark 81 - Bếp Trung Tâm
+            </option>
+            <option value="Quận 1 - Đồng Khởi Flagship" className="bg-slate-900 text-white">
+              Quận 1 - Đồng Khởi Flagship
+            </option>
+            <option value="Hà Nội - Tây Hồ Premium" className="bg-slate-900 text-white">
+              Hà Nội - Tây Hồ Premium
+            </option>
           </select>
         </div>
 
-        {/* HACCP Compliance Live Status */}
-        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>HACCP Active</span>
+        {/* Real-time Status Badge */}
+        <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Hệ thống trực tuyến (HACCP Active)</span>
+        </div>
+      </div>
+      
+      {/* Right: Search + Notifications */}
+      <div className="flex items-center gap-3">
+        <div className="w-64 hidden md:block">
+          <Input 
+            placeholder="Tìm kiếm nhanh (Ctrl + K)..." 
+            icon={<Search className="w-4 h-4" />}
+            className="bg-slate-900/80 border-slate-700/60 text-xs h-8"
+          />
         </div>
 
-        {/* Notifications Button */}
+        {/* Notifications Dropdown */}
         <div className="relative">
           <button 
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800/60 transition-colors border border-transparent hover:border-slate-700/50"
-            aria-label="Thông báo"
+            onClick={() => setIsAlertOpen(!isAlertOpen)}
+            className="relative p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800 cursor-pointer"
+            title="Thông báo cảnh báo"
           >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-slate-900 animate-pulse"></span>
+            <Bell className="w-5 h-5" />
+            {unreadAlerts.length > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            )}
           </button>
 
-          {/* Notifications Flyout */}
-          {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-semibold text-white">Thông báo tuân thủ</h4>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-400">
-                    3 mới
-                  </span>
+          {/* Alert Popover */}
+          {isAlertOpen && (
+            <div className="absolute right-0 mt-2 w-80 rounded-xl bg-slate-900 border border-slate-700/80 shadow-2xl p-3 z-50 animate-slide-in">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-white">Cảnh Báo An Toàn Thực Phẩm</span>
+                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                    {unreadAlerts.length}
+                  </Badge>
                 </div>
                 <button 
-                  onClick={() => setShowNotifications(false)}
-                  className="text-slate-400 hover:text-white p-1 rounded-lg"
+                  onClick={() => setIsAlertOpen(false)}
+                  className="text-slate-400 hover:text-white"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                {notifications.map((n) => (
-                  <div 
-                    key={n.id} 
-                    className="p-3 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-800 transition-colors text-xs flex gap-3"
+              <div className="space-y-2">
+                {unreadAlerts.map((alert) => (
+                  <Link
+                    key={alert.id}
+                    href={alert.href}
+                    onClick={() => setIsAlertOpen(false)}
+                    className="block p-2.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 transition border border-slate-700/50"
                   >
-                    {n.type === 'warning' ? (
-                      <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                    ) : (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white truncate">{n.title}</p>
-                      <p className="text-slate-400 text-[11px] mt-0.5 line-clamp-2">{n.desc}</p>
-                      <span className="text-[10px] text-slate-500 mt-1 block">{n.time}</span>
+                    <div className="flex items-start gap-2">
+                      {alert.type === 'critical' ? (
+                        <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <p className="text-xs font-medium text-white leading-snug">{alert.title}</p>
+                        <p className="text-[10px] text-slate-400 mt-1">{alert.time}</p>
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
+              </div>
+
+              <div className="pt-2 mt-2 border-t border-slate-800 text-center">
+                <Link
+                  href="/corrective-actions"
+                  onClick={() => setIsAlertOpen(false)}
+                  className="text-[11px] text-indigo-400 hover:underline font-semibold"
+                >
+                  Xem toàn bộ sổ theo dõi sự cố (CAPA) →
+                </Link>
               </div>
             </div>
           )}
         </div>
       </div>
-    </header>
+    </div>
   );
 }

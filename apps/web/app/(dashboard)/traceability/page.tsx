@@ -1,396 +1,771 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Modal } from '@/components/ui/modal';
 import { 
-  PackageSearch, 
-  Plus, 
+  Package, 
   Search, 
+  Plus, 
+  Filter, 
   AlertTriangle, 
+  CheckCircle2, 
+  Clock, 
+  Trash2, 
   Calendar, 
   Truck, 
-  Thermometer, 
-  X,
-  FileCheck2,
-  ShieldAlert
+  ShieldCheck, 
+  Eye, 
+  ArrowRight,
+  Warehouse,
+  Thermometer,
+  Layers,
+  FileSpreadsheet
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
-interface Batch {
+interface BatchItem {
   id: string;
-  batchCode: string;
+  batchNumber: string;
   productName: string;
   category: string;
   supplier: string;
-  receivedDate: string;
+  receivedAt: string;
   expiryDate: string;
-  quantity: string;
-  deliveryTemp: number;
-  status: 'active' | 'expiring_soon' | 'depleted' | 'quarantined';
+  quantity: number;
+  initialQuantity: number;
+  unit: string;
   storageLocation: string;
+  receivingTemp: number;
+  status: 'active' | 'warning' | 'consumed' | 'discarded';
+  notes?: string;
+  haccpCheck: boolean;
 }
 
-const mockBatches: Batch[] = [
+const initialBatches: BatchItem[] = [
   {
-    id: '1',
-    batchCode: 'LOT-2026-0924-A1',
-    productName: 'Thịt bò Úc Ribeye đông lạnh',
-    category: 'Thịt bò',
-    supplier: 'Công ty TNHH Thực Phẩm Sạch Toàn Cầu',
-    receivedDate: '2026-09-24T08:15:00Z',
+    id: 'BATCH-001',
+    batchNumber: 'LOT-20260924-THITBO',
+    productName: 'Thịt Bò Thăn Úc Prime (Đông lạnh)',
+    category: 'Thịt tươi sống',
+    supplier: 'Công ty Cổ phần Thực phẩm Sạch Vissan',
+    receivedAt: '2026-09-24T07:30:00Z',
     expiryDate: '2026-10-24T00:00:00Z',
-    quantity: '50 kg',
-    deliveryTemp: -18.2,
+    quantity: 45,
+    initialQuantity: 50,
+    unit: 'Kg',
+    storageLocation: 'Kho Đông Sâu #01 (-18°C)',
+    receivingTemp: -19.2,
     status: 'active',
-    storageLocation: 'Kho đông sâu #1 - Kệ B2',
+    notes: 'Bao bì nguyên vẹn, chứng nhận kiểm dịch thú y số 48291/KD',
+    haccpCheck: true,
   },
   {
-    id: '2',
-    batchCode: 'LOT-2026-0922-C3',
-    productName: 'Cá hồi tươi Na Uy Fillet',
+    id: 'BATCH-002',
+    batchNumber: 'LOT-20260925-CAHOI',
+    productName: 'Cá Hồi Nauy Fillet Tươi Fresh',
     category: 'Thủy hải sản',
     supplier: 'Hải Sản Biển Đông Logistics',
-    receivedDate: '2026-09-22T06:30:00Z',
-    expiryDate: '2026-09-26T00:00:00Z',
-    quantity: '25 kg',
-    deliveryTemp: 1.5,
-    status: 'expiring_soon',
-    storageLocation: 'Tủ bảo quản hải sản #2',
+    receivedAt: '2026-09-25T06:15:00Z',
+    expiryDate: '2026-09-27T18:00:00Z',
+    quantity: 18,
+    initialQuantity: 20,
+    unit: 'Kg',
+    storageLocation: 'Tủ Mát Chuyên Dụng Bếp Sashimi (1.5°C)',
+    receivingTemp: 2.1,
+    status: 'warning',
+    notes: 'Cận hạn sử dụng trong 48h - Ưu tiên chế biến thực đơn trong ngày (FEFO)',
+    haccpCheck: true,
   },
   {
-    id: '3',
-    batchCode: 'LOT-2026-0920-V2',
-    productName: 'Sữa chua men sống Anchor',
-    category: 'Sữa & Chế phẩm sữa',
-    supplier: 'Đại lý Fonterra Miền Nam',
-    receivedDate: '2026-09-20T09:00:00Z',
-    expiryDate: '2026-09-25T00:00:00Z',
-    quantity: '120 hộp',
-    deliveryTemp: 3.8,
-    status: 'expiring_soon',
-    storageLocation: 'Tủ mát sữa & tráng miệng',
-  },
-  {
-    id: '4',
-    batchCode: 'LOT-2026-0918-D1',
-    productName: 'Trứng gà tiệt trùng Ba Huân',
-    category: 'Trứng & Gia cầm',
-    supplier: 'Công ty Cổ phần Ba Huân',
-    receivedDate: '2026-09-18T10:00:00Z',
-    expiryDate: '2026-10-02T00:00:00Z',
-    quantity: '300 quả',
-    deliveryTemp: 18.0,
+    id: 'BATCH-003',
+    batchNumber: 'LOT-20260923-SUA',
+    productName: 'Sữa Tươi Tiệt Trùng Nguyên Chất 1L',
+    category: 'Sữa & Bơ sữa',
+    supplier: 'Vinamilk Food Service',
+    receivedAt: '2026-09-23T09:00:00Z',
+    expiryDate: '2026-12-15T00:00:00Z',
+    quantity: 120,
+    initialQuantity: 120,
+    unit: 'Hộp',
+    storageLocation: 'Kho Mát Pha Chế #02 (3.5°C)',
+    receivingTemp: 4.0,
     status: 'active',
-    storageLocation: 'Kho khô mát nhiệt độ phòng',
+    notes: 'Kiểm tra niêm phong nắp hộp hoàn chỉnh',
+    haccpCheck: true,
   },
   {
-    id: '5',
-    batchCode: 'LOT-2026-0915-Q9',
-    productName: 'Tôm sú tươi 20 con/kg (Nghi nhiễm vi sinh)',
-    category: 'Thủy hải sản',
-    supplier: 'Nhà cung cấp Minh Phú Bến Tre',
-    receivedDate: '2026-09-15T07:00:00Z',
+    id: 'BATCH-004',
+    batchNumber: 'LOT-20260924-RAUDALAT',
+    productName: 'Rau Xà Lách Lô Lô Hữu Cơ Chuẩn VietGAP',
+    category: 'Rau củ quả',
+    supplier: 'Hợp Tác Xã Rau Sạch Đà Lạt Green',
+    receivedAt: '2026-09-24T05:45:00Z',
     expiryDate: '2026-09-28T00:00:00Z',
-    quantity: '40 kg',
-    deliveryTemp: 4.2,
-    status: 'quarantined',
-    storageLocation: 'Khu cách ly chờ hủy / kiểm định',
+    quantity: 30,
+    initialQuantity: 30,
+    unit: 'Kg',
+    storageLocation: 'Kho Mát Rau Củ (6.0°C)',
+    receivingTemp: 5.8,
+    status: 'active',
+    notes: 'Rau tươi, không dập nát, test dư lượng thuốc BVTV âm tính',
+    haccpCheck: true,
+  },
+  {
+    id: 'BATCH-005',
+    batchNumber: 'LOT-20260920-GA',
+    productName: 'Thịt Gà Tươi Làm Sẵn CP Safe',
+    category: 'Thịt tươi sống',
+    supplier: 'Tập đoàn C.P. Việt Nam',
+    receivedAt: '2026-09-20T07:00:00Z',
+    expiryDate: '2026-09-23T18:00:00Z',
+    quantity: 0,
+    initialQuantity: 40,
+    unit: 'Kg',
+    storageLocation: 'Tủ Trữ Bếp Nóng',
+    receivingTemp: 1.8,
+    status: 'consumed',
+    notes: 'Đã xuất kho chế biến hết theo định lượng tiệc',
+    haccpCheck: true,
+  },
+  {
+    id: 'BATCH-006',
+    batchNumber: 'LOT-20260918-BOHAP',
+    productName: 'Bơ Lạt Lactic 250g Nhập Khẩu',
+    category: 'Sữa & Bơ sữa',
+    supplier: 'Anchor Food Professionals',
+    receivedAt: '2026-09-18T10:00:00Z',
+    expiryDate: '2026-09-21T00:00:00Z',
+    quantity: 5,
+    initialQuantity: 15,
+    unit: 'Kg',
+    storageLocation: 'Khu Vực Cách Ly Hàng Chờ Hủy',
+    receivingTemp: 9.5,
+    status: 'discarded',
+    notes: 'Nhiệt độ giao hàng vượt ngưỡng 8°C lúc giao, lập biên bản tiêu hủy theo HACCP',
+    haccpCheck: false,
   },
 ];
 
 export default function TraceabilityPage() {
-  const [batches, setBatches] = useState<Batch[]>(mockBatches);
-  const [search, setSearch] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newBatch, setNewBatch] = useState({
+  const [batches, setBatches] = useState<BatchItem[]>(initialBatches);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'warning' | 'consumed' | 'discarded'>('all');
+  const [selectedBatch, setSelectedBatch] = useState<BatchItem | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // New Batch Form State
+  const [formData, setFormData] = useState({
+    batchNumber: '',
     productName: '',
-    batchCode: '',
+    category: 'Thịt tươi sống',
     supplier: '',
-    category: 'Thịt tươi',
-    quantity: '',
-    deliveryTemp: -18,
     expiryDate: '',
-    storageLocation: '',
+    quantity: '',
+    unit: 'Kg',
+    storageLocation: 'Kho Đông Sâu #01 (-18°C)',
+    receivingTemp: '2.0',
+    notes: '',
   });
 
   const handleCreateBatch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newBatch.productName || !newBatch.batchCode) return;
+    if (!formData.productName || !formData.batchNumber) return;
 
-    const created: Batch = {
-      id: String(Date.now()),
-      batchCode: newBatch.batchCode,
-      productName: newBatch.productName,
-      category: newBatch.category,
-      supplier: newBatch.supplier || 'Nhà cung cấp nội địa',
-      receivedDate: new Date().toISOString(),
-      expiryDate: newBatch.expiryDate || new Date(Date.now() + 30 * 86400000).toISOString(),
-      quantity: newBatch.quantity || '10 kg',
-      deliveryTemp: Number(newBatch.deliveryTemp),
+    const newBatch: BatchItem = {
+      id: `BATCH-${Date.now().toString().slice(-4)}`,
+      batchNumber: formData.batchNumber,
+      productName: formData.productName,
+      category: formData.category,
+      supplier: formData.supplier || 'Nhà cung ứng nội bộ',
+      receivedAt: new Date().toISOString(),
+      expiryDate: formData.expiryDate ? new Date(formData.expiryDate).toISOString() : new Date(Date.now() + 7 * 86400000).toISOString(),
+      quantity: Number(formData.quantity) || 10,
+      initialQuantity: Number(formData.quantity) || 10,
+      unit: formData.unit,
+      storageLocation: formData.storageLocation,
+      receivingTemp: parseFloat(formData.receivingTemp) || 3.0,
       status: 'active',
-      storageLocation: newBatch.storageLocation || 'Kho mát Bếp chính',
+      notes: formData.notes || 'Nhập kho thông qua kiểm soát CCP-1',
+      haccpCheck: true,
     };
 
-    setBatches([created, ...batches]);
-    setIsModalOpen(false);
-    setNewBatch({
+    setBatches([newBatch, ...batches]);
+    setIsCreateModalOpen(false);
+    setFormData({
+      batchNumber: '',
       productName: '',
-      batchCode: '',
+      category: 'Thịt tươi sống',
       supplier: '',
-      category: 'Thịt tươi',
-      quantity: '',
-      deliveryTemp: -18,
       expiryDate: '',
-      storageLocation: '',
+      quantity: '',
+      unit: 'Kg',
+      storageLocation: 'Kho Đông Sâu #01 (-18°C)',
+      receivingTemp: '2.0',
+      notes: '',
     });
   };
 
-  const handleQuarantine = (id: string) => {
-    setBatches(prev => prev.map(b => b.id === id ? { ...b, status: 'quarantined' } : b));
-  };
+  const filteredBatches = batches.filter(batch => {
+    const matchesSearch = 
+      batch.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      batch.batchNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      batch.supplier.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || batch.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
-  const filteredBatches = batches.filter(b => 
-    b.productName.toLowerCase().includes(search.toLowerCase()) ||
-    b.batchCode.toLowerCase().includes(search.toLowerCase()) ||
-    b.supplier.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const expiringCount = batches.filter(b => b.status === 'expiring_soon').length;
+  const activeCount = batches.filter(b => b.status === 'active').length;
+  const warningCount = batches.filter(b => b.status === 'warning').length;
+  const consumedCount = batches.filter(b => b.status === 'consumed').length;
+  const discardedCount = batches.filter(b => b.status === 'discarded').length;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+    <div className="space-y-6 animate-slide-in">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-white">Truy Xuất Nguồn Gốc Lô Hàng</h2>
-          <p className="text-slate-400 text-sm mt-1">
-            Kiểm thực 3 bước, theo dõi nguồn gốc thực phẩm và thời hạn sử dụng theo tiêu chuẩn HACCP
-          </p>
-        </div>
-        <Button onClick={() => setIsModalOpen(true)} className="gap-2 shadow-lg shadow-indigo-600/30">
-          <Plus className="w-4 h-4" />
-          Tiếp nhận lô hàng mới
-        </Button>
-      </div>
-
-      {/* Expiring Soon Alert Banner */}
-      {expiringCount > 0 && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
-              <AlertTriangle className="w-5 h-5" />
+            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <Package className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-amber-200">
-                Cảnh báo hạn dùng: Có {expiringCount} lô thực phẩm sắp hết hạn trong vòng 72 giờ
-              </p>
-              <p className="text-xs text-amber-300/70">
-                Ưu tiên chế biến theo nguyên tắc FIFO (First In First Out) hoặc kiểm tra cảm quan trước khi sơ chế.
-              </p>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Truy Xuất Nguồn Gốc & Lô Hàng</h1>
+              <p className="text-slate-400 text-sm mt-0.5">Quản lý nhận hàng, chuỗi lưu trữ nhiệt độ và truy vết an toàn thực phẩm HACCP</p>
             </div>
           </div>
-          <Badge variant="warning" className="shrink-0">Cần xử lý</Badge>
         </div>
-      )}
-
-      {/* Filter and Search Bar */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Input 
-            placeholder="Tìm theo tên thực phẩm, mã lô (LOT), nhà cung cấp..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            icon={<Search className="w-4 h-4 text-slate-400" />}
-            className="bg-slate-900 border-slate-800"
-          />
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2 shadow-lg shadow-indigo-600/25"
+          >
+            <Plus className="w-4 h-4" />
+            Nhập Lô Hàng Mới
+          </Button>
         </div>
       </div>
 
-      {/* Table */}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="glassmorphism border-indigo-500/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-300">Lô đang lưu kho</CardTitle>
+            <Warehouse className="w-4 h-4 text-indigo-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{activeCount}</div>
+            <p className="text-xs text-slate-400 mt-1">Đảm bảo điều kiện HACCP 100%</p>
+          </CardContent>
+        </Card>
+
+        <Card className="glassmorphism border-amber-500/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-300">Cận hạn sử dụng (FEFO)</CardTitle>
+            <AlertTriangle className="w-4 h-4 text-amber-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-400">{warningCount}</div>
+            <p className="text-xs text-amber-400/80 mt-1">Cần ưu tiên chế biến trong 48h</p>
+          </CardContent>
+        </Card>
+
+        <Card className="glassmorphism border-emerald-500/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-300">Đã tiêu thụ hết</CardTitle>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-400">{consumedCount}</div>
+            <p className="text-xs text-slate-400 mt-1">Đầy đủ chứng từ xuất kho</p>
+          </CardContent>
+        </Card>
+
+        <Card className="glassmorphism border-red-500/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-300">Lô cách ly / Tiêu hủy</CardTitle>
+            <Trash2 className="w-4 h-4 text-red-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-400">{discardedCount}</div>
+            <p className="text-xs text-red-400/80 mt-1">Vi phạm tiêu chuẩn đầu vào</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filter and Search Bar */}
       <Card className="glassmorphism">
-        <CardContent className="p-0">
-          <div className="rounded-xl overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-slate-900/80 text-slate-300 border-b border-slate-800">
-                <tr>
-                  <th className="px-6 py-4 font-semibold">Mã Lô / Thực Phẩm</th>
-                  <th className="px-6 py-4 font-semibold">Nhà Cung Cấp</th>
-                  <th className="px-6 py-4 font-semibold">Nhiệt Độ Xe Giao</th>
-                  <th className="px-6 py-4 font-semibold">Ngày Nhận / Hạn Dùng</th>
-                  <th className="px-6 py-4 font-semibold">Vị Trí Lưu Kho</th>
-                  <th className="px-6 py-4 font-semibold">Trạng Thái</th>
-                  <th className="px-6 py-4 font-semibold text-right">Thao Tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {filteredBatches.map((batch) => (
-                  <tr key={batch.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-white">{batch.productName}</div>
-                      <div className="text-xs font-mono text-indigo-400 mt-0.5">{batch.batchCode}</div>
-                      <span className="text-[11px] text-slate-400">SL: {batch.quantity}</span>
-                    </td>
-                    <td className="px-6 py-4 text-xs text-slate-300">
-                      <div className="flex items-center gap-1.5">
-                        <Truck className="w-3.5 h-3.5 text-slate-500" />
-                        <span>{batch.supplier}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1 font-mono font-semibold">
-                        <Thermometer className="w-3.5 h-3.5 text-orange-400" />
-                        <span className={batch.deliveryTemp > 4 && batch.deliveryTemp < 60 ? 'text-amber-400' : 'text-emerald-400'}>
-                          {batch.deliveryTemp > 0 ? `+${batch.deliveryTemp}` : batch.deliveryTemp}°C
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-xs">
-                      <div className="text-slate-300">Nhận: {formatDate(batch.receivedDate)}</div>
-                      <div className="text-slate-400 mt-0.5 flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-slate-500" />
-                        Hạn: {formatDate(batch.expiryDate)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-xs text-slate-400">
-                      {batch.storageLocation}
-                    </td>
-                    <td className="px-6 py-4">
-                      {batch.status === 'active' && <Badge variant="success">Đạt chuẩn</Badge>}
-                      {batch.status === 'expiring_soon' && <Badge variant="warning">Sắp hết hạn</Badge>}
-                      {batch.status === 'quarantined' && <Badge variant="danger">Đang cách ly</Badge>}
-                      {batch.status === 'depleted' && <Badge variant="default">Đã dùng hết</Badge>}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {batch.status !== 'quarantined' ? (
-                        <button
-                          onClick={() => handleQuarantine(batch.id)}
-                          className="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 px-2.5 py-1.5 rounded-lg transition-colors font-medium"
-                        >
-                          Cách ly
-                        </button>
-                      ) : (
-                        <span className="text-xs text-slate-500 italic">Đã phong tỏa</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+            <div className="w-full md:w-96">
+              <Input
+                placeholder="Tìm theo tên nguyên liệu, mã lô hoặc nhà cung cấp..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                icon={<Search className="w-4 h-4" />}
+                className="bg-slate-900/60 border-slate-700/60"
+              />
+            </div>
+            
+            {/* Filter buttons */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs text-slate-400 mr-1 flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5" /> Lọc:
+              </span>
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  statusFilter === 'all' 
+                    ? 'bg-indigo-600 text-white shadow-sm' 
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                Tất cả ({batches.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('active')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  statusFilter === 'active' 
+                    ? 'bg-indigo-600 text-white shadow-sm' 
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                Đang lưu kho ({activeCount})
+              </button>
+              <button
+                onClick={() => setStatusFilter('warning')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  statusFilter === 'warning' 
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                Cận hạn ({warningCount})
+              </button>
+              <button
+                onClick={() => setStatusFilter('consumed')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  statusFilter === 'consumed' 
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                Đã dùng hết ({consumedCount})
+              </button>
+              <button
+                onClick={() => setStatusFilter('discarded')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  statusFilter === 'discarded' 
+                    ? 'bg-red-500/20 text-red-300 border border-red-500/40' 
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                Tiêu hủy ({discardedCount})
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Create Batch Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
-                  <PackageSearch className="w-5 h-5" />
+      {/* Main Table */}
+      <Card className="glassmorphism overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-900/80 text-slate-300 border-b border-slate-800">
+              <tr>
+                <th className="px-6 py-4 font-semibold">Mã Lô & Nguyên Liệu</th>
+                <th className="px-6 py-4 font-semibold">Nhà Cung Cấp</th>
+                <th className="px-6 py-4 font-semibold">Tồn Kho / Đơn Vị</th>
+                <th className="px-6 py-4 font-semibold">Vị Trí & Nhiệt Độ</th>
+                <th className="px-6 py-4 font-semibold">Hạn Dùng (FEFO)</th>
+                <th className="px-6 py-4 font-semibold">Trạng Thái</th>
+                <th className="px-6 py-4 font-semibold text-right">Chi Tiết</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/80">
+              {filteredBatches.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-slate-400">
+                        <Package className="w-6 h-6" />
+                      </div>
+                      <p className="text-base font-medium text-slate-300">Không tìm thấy lô hàng nào</p>
+                      <p className="text-xs text-slate-500 max-w-sm">Thử thay đổi từ khóa tìm kiếm hoặc bấm nút "Nhập Lô Hàng Mới" để tạo dữ liệu truy vết.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredBatches.map((batch) => {
+                  const percentLeft = Math.round((batch.quantity / batch.initialQuantity) * 100);
+                  return (
+                    <tr key={batch.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 flex-shrink-0">
+                            <Layers className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-white flex items-center gap-2">
+                              {batch.productName}
+                              {batch.haccpCheck && (
+                                <span title="Đạt tiêu chuẩn kiểm tra CCP tiếp nhận">
+                                  <ShieldCheck className="w-4 h-4 text-emerald-400 inline" />
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-indigo-400 font-mono mt-0.5">
+                              {batch.batchNumber}
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">{batch.category}</div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="text-slate-300 font-medium">{batch.supplier}</div>
+                        <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                          <Clock className="w-3 h-3" /> Nhận: {formatDate(batch.receivedAt)}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-base font-bold text-white">{batch.quantity}</span>
+                          <span className="text-xs text-slate-400">/ {batch.initialQuantity} {batch.unit}</span>
+                        </div>
+                        <div className="w-24 bg-slate-800 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full ${
+                              batch.quantity === 0 ? 'bg-slate-600' :
+                              percentLeft < 20 ? 'bg-amber-500' : 'bg-indigo-500'
+                            }`}
+                            style={{ width: `${percentLeft}%` }}
+                          />
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="text-xs text-slate-300 flex items-center gap-1.5">
+                          <Warehouse className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <span className="truncate max-w-[180px]">{batch.storageLocation}</span>
+                        </div>
+                        <div className="text-xs text-slate-400 flex items-center gap-1 mt-1 font-mono">
+                          <Thermometer className="w-3.5 h-3.5 text-orange-400" />
+                          <span>Giao: {batch.receivingTemp > 0 ? `+${batch.receivingTemp}` : batch.receivingTemp}°C</span>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="text-xs font-medium text-slate-200">
+                          {formatDate(batch.expiryDate)}
+                        </div>
+                        {batch.status === 'warning' && (
+                          <span className="text-[11px] text-amber-400 flex items-center gap-1 mt-0.5">
+                            <AlertTriangle className="w-3 h-3" /> Cận hạn sử dụng
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        {batch.status === 'active' && (
+                          <Badge variant="success">Lưu kho</Badge>
+                        )}
+                        {batch.status === 'warning' && (
+                          <Badge variant="warning">Cận hạn</Badge>
+                        )}
+                        {batch.status === 'consumed' && (
+                          <Badge variant="secondary">Đã dùng hết</Badge>
+                        )}
+                        {batch.status === 'discarded' && (
+                          <Badge variant="destructive">Tiêu hủy</Badge>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setSelectedBatch(batch)}
+                          className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+                        >
+                          <Eye className="w-4 h-4 mr-1.5" />
+                          Truy vết
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Modal: View Traceability Tree & Batch Details */}
+      {selectedBatch && (
+        <Modal
+          isOpen={!!selectedBatch}
+          onClose={() => setSelectedBatch(null)}
+          title={`Hồ Sơ Truy Xuất: ${selectedBatch.batchNumber}`}
+        >
+          <div className="space-y-5 max-h-[75vh] overflow-y-auto pr-1">
+            <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700/60 space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-white">{selectedBatch.productName}</h3>
+                  <p className="text-xs text-indigo-400 font-mono mt-0.5">{selectedBatch.batchNumber}</p>
+                </div>
+                <Badge variant={
+                  selectedBatch.status === 'active' ? 'success' :
+                  selectedBatch.status === 'warning' ? 'warning' :
+                  selectedBatch.status === 'consumed' ? 'secondary' : 'destructive'
+                }>
+                  {selectedBatch.status === 'active' ? 'Đang lưu kho' :
+                   selectedBatch.status === 'warning' ? 'Cận hạn' :
+                   selectedBatch.status === 'consumed' ? 'Đã tiêu thụ' : 'Đã tiêu hủy'}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs pt-2 border-t border-slate-700/50">
+                <div>
+                  <span className="text-slate-400">Nhà cung cấp:</span>
+                  <p className="font-semibold text-slate-200 mt-0.5">{selectedBatch.supplier}</p>
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Tiếp Nhận Lô Hàng Mới</h3>
-                  <p className="text-xs text-slate-400">Kiểm thực bước 1: Giao nhận nguyên liệu</p>
+                  <span className="text-slate-400">Thời gian nhận hàng:</span>
+                  <p className="font-semibold text-slate-200 mt-0.5">{formatDate(selectedBatch.receivedAt)}</p>
+                </div>
+                <div>
+                  <span className="text-slate-400">Vị trí bảo quản:</span>
+                  <p className="font-semibold text-slate-200 mt-0.5">{selectedBatch.storageLocation}</p>
+                </div>
+                <div>
+                  <span className="text-slate-400">Hạn sử dụng (EXP):</span>
+                  <p className="font-semibold text-slate-200 mt-0.5">{formatDate(selectedBatch.expiryDate)}</p>
+                </div>
+                <div>
+                  <span className="text-slate-400">Số lượng hiện tại:</span>
+                  <p className="font-semibold text-slate-200 mt-0.5">{selectedBatch.quantity} / {selectedBatch.initialQuantity} {selectedBatch.unit}</p>
+                </div>
+                <div>
+                  <span className="text-slate-400">Nhiệt độ giao nhận CCP:</span>
+                  <p className="font-semibold text-slate-200 mt-0.5">{selectedBatch.receivingTemp}°C</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
+
+              {selectedBatch.notes && (
+                <div className="p-2.5 rounded-lg bg-slate-900/60 text-xs text-slate-300 border border-slate-800">
+                  <span className="font-semibold text-slate-400">Ghi chú kiểm soát:</span> {selectedBatch.notes}
+                </div>
+              )}
             </div>
 
-            <form onSubmit={handleCreateBatch} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Tên thực phẩm / Nguyên liệu *</label>
-                  <Input 
-                    placeholder="VD: Thịt ba chỉ bò Mỹ"
-                    value={newBatch.productName}
-                    onChange={(e) => setNewBatch({ ...newBatch, productName: e.target.value })}
-                    required
-                  />
+            {/* Traceability Audit Trail Steps */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <Truck className="w-4 h-4 text-indigo-400" /> Chuỗi Hành Trình Kiểm Soát An Toàn (CCP Chain)
+              </h4>
+              <div className="space-y-3 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-slate-800">
+                <div className="relative flex items-start gap-3 pl-1">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xs flex-shrink-0 z-10">
+                    ✓
+                  </div>
+                  <div className="flex-1 bg-slate-800/40 p-3 rounded-lg border border-slate-700/40">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-white">Bước 1: Tiếp nhận tại khu giao hàng (CCP-1)</span>
+                      <span className="text-[11px] text-slate-400">{formatDate(selectedBatch.receivedAt)}</span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1">
+                      Kiểm tra cảm quan đạt chuẩn. Nhiệt độ xe lạnh: {selectedBatch.receivingTemp}°C. Có chứng nhận an toàn thực phẩm đi kèm.
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Mã Lô (LOT Number) *</label>
-                  <Input 
-                    placeholder="VD: LOT-2026-0924-B1"
-                    value={newBatch.batchCode}
-                    onChange={(e) => setNewBatch({ ...newBatch, batchCode: e.target.value })}
-                    required
-                  />
+
+                <div className="relative flex items-start gap-3 pl-1">
+                  <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 flex items-center justify-center text-xs flex-shrink-0 z-10">
+                    2
+                  </div>
+                  <div className="flex-1 bg-slate-800/40 p-3 rounded-lg border border-slate-700/40">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-white">Bước 2: Dán nhãn barcode & Lưu kho (CCP-2)</span>
+                      <span className="text-[11px] text-slate-400">Nhân viên kho ca sáng</span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1">
+                      Nhập vị trí: {selectedBatch.storageLocation}. Áp dụng nguyên tắc xuất nhập trước FEFO.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="relative flex items-start gap-3 pl-1">
+                  <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 flex items-center justify-center text-xs flex-shrink-0 z-10">
+                    3
+                  </div>
+                  <div className="flex-1 bg-slate-800/40 p-3 rounded-lg border border-slate-700/40">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-white">Bước 3: Xuất sang bộ phận sơ chế / Bếp chính</span>
+                      <span className="text-[11px] text-slate-400">Kiểm tra vi sinh định kỳ</span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1">
+                      Sẵn sàng truy xuất đến từng đĩa món ăn phục vụ thực khách trong trường hợp có yêu cầu kiểm toán an toàn vệ sinh thực phẩm.
+                    </p>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Nhà cung cấp</label>
-                  <Input 
-                    placeholder="Tên công ty / HTX cung cấp"
-                    value={newBatch.supplier}
-                    onChange={(e) => setNewBatch({ ...newBatch, supplier: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Số lượng nhận</label>
-                  <Input 
-                    placeholder="VD: 50 kg hoặc 100 thùng"
-                    value={newBatch.quantity}
-                    onChange={(e) => setNewBatch({ ...newBatch, quantity: e.target.value })}
-                  />
-                </div>
-              </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <Button variant="outline" size="sm" onClick={() => setSelectedBatch(null)}>
+                Đóng
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Nhiệt độ giao nhận (°C) *</label>
-                  <Input 
-                    type="number"
-                    step="0.1"
-                    value={newBatch.deliveryTemp}
-                    onChange={(e) => setNewBatch({ ...newBatch, deliveryTemp: parseFloat(e.target.value) || 0 })}
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Hạn sử dụng</label>
-                  <Input 
-                    type="date"
-                    value={newBatch.expiryDate}
-                    onChange={(e) => setNewBatch({ ...newBatch, expiryDate: e.target.value })}
-                  />
-                </div>
-              </div>
+      {/* Modal: Create New Batch */}
+      {isCreateModalOpen && (
+        <Modal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          title="Nhập Lô Nguyên Liệu Mới (HACCP Receiving)"
+        >
+          <form onSubmit={handleCreateBatch} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-300">Tên nguyên liệu / Thực phẩm *</label>
+              <Input
+                placeholder="VD: Thịt ba chỉ heo sạch CP"
+                value={formData.productName}
+                onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
+                required
+              />
+            </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Vị trí xếp kho</label>
-                <Input 
-                  placeholder="VD: Kho đông #1 Kệ A hoặc Tủ mát salad"
-                  value={newBatch.storageLocation}
-                  onChange={(e) => setNewBatch({ ...newBatch, storageLocation: e.target.value })}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Mã lô (Lot Number) *</label>
+                <Input
+                  placeholder="VD: LOT-20260925-HEOCP"
+                  value={formData.batchNumber}
+                  onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
+                  required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsModalOpen(false)}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Phân loại thực phẩm</label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="flex h-9 w-full rounded-md border border-slate-700 bg-slate-900/50 px-3 py-1 text-sm text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
                 >
-                  Hủy
-                </Button>
-                <Button type="submit" variant="primary">
-                  Xác nhận lưu lô hàng
-                </Button>
+                  <option value="Thịt tươi sống">Thịt tươi sống</option>
+                  <option value="Thủy hải sản">Thủy hải sản</option>
+                  <option value="Rau củ quả">Rau củ quả</option>
+                  <option value="Sữa & Bơ sữa">Sữa & Bơ sữa</option>
+                  <option value="Gia vị & Đồ khô">Gia vị & Đồ khô</option>
+                  <option value="Thực phẩm đóng gói">Thực phẩm đóng gói</option>
+                </select>
               </div>
-            </form>
-          </div>
-        </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-300">Nhà cung cấp</label>
+              <Input
+                placeholder="VD: Công ty Cổ phần Thực phẩm CP Việt Nam"
+                value={formData.supplier}
+                onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Số lượng</label>
+                <Input
+                  type="number"
+                  placeholder="25"
+                  value={formData.quantity}
+                  onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Đơn vị tính</label>
+                <select
+                  value={formData.unit}
+                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                  className="flex h-9 w-full rounded-md border border-slate-700 bg-slate-900/50 px-3 py-1 text-sm text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                >
+                  <option value="Kg">Kg</option>
+                  <option value="Gói">Gói</option>
+                  <option value="Hộp">Hộp</option>
+                  <option value="Thùng">Thùng</option>
+                  <option value="Lít">Lít</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Nhiệt độ giao (°C)</label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="-18 hoặc 2.5"
+                  value={formData.receivingTemp}
+                  onChange={(e) => setFormData({ ...formData, receivingTemp: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Vị trí lưu kho</label>
+                <select
+                  value={formData.storageLocation}
+                  onChange={(e) => setFormData({ ...formData, storageLocation: e.target.value })}
+                  className="flex h-9 w-full rounded-md border border-slate-700 bg-slate-900/50 px-3 py-1 text-sm text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                >
+                  <option value="Kho Đông Sâu #01 (-18°C)">Kho Đông Sâu #01 (-18°C)</option>
+                  <option value="Kho Đông Sâu #02 (-18°C)">Kho Đông Sâu #02 (-18°C)</option>
+                  <option value="Kho Mát Bếp Chính (2-4°C)">Kho Mát Bếp Chính (2-4°C)</option>
+                  <option value="Kho Mát Rau Củ (5-7°C)">Kho Mát Rau Củ (5-7°C)</option>
+                  <option value="Kho Khô Gia Vị (20-25°C)">Kho Khô Gia Vị (20-25°C)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300">Hạn sử dụng</label>
+                <Input
+                  type="date"
+                  value={formData.expiryDate}
+                  onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-300">Ghi chú tiếp nhận kiểm soát HACCP</label>
+              <Input
+                placeholder="VD: Bao bì sạch, nhiệt độ giao hàng đạt chuẩn, xe vận chuyển vệ sinh tốt"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+              <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white">
+                Lưu Hồ Sơ Lô Hàng
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

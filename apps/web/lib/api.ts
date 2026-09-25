@@ -26,27 +26,19 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        const state = useAuthStore.getState();
-        const refreshToken = state.refreshToken;
-        const user = state.user;
-        if (!refreshToken || !user) throw new Error('No valid session');
+        const refreshToken = useAuthStore.getState().refreshToken;
+        if (!refreshToken) throw new Error('No refresh token');
         
         const { data } = await axios.post(`${api.defaults.baseURL}/auth/refresh`, { refreshToken });
         
-        useAuthStore.getState().setAuth({
-          user,
-          accessToken: data.data.accessToken,
-          refreshToken: data.data.refreshToken || refreshToken,
-          permissions: state.permissions,
-        });
+        useAuthStore.getState().setAccessToken(data.data.accessToken);
         
         originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
+
         return api(originalRequest);
       } catch (err) {
         useAuthStore.getState().logout();
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
+        window.location.href = '/login';
         return Promise.reject(err);
       }
     }
