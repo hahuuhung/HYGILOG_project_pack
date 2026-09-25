@@ -7,417 +7,163 @@ async function seed() {
   const client = new MongoClient(uri);
   try {
     await client.connect();
-    console.log('Connected to MongoDB:', uri);
+    console.log('Connected to MongoDB');
     const db = client.db();
 
-    // Clear existing collections
-    const collectionsToClear = [
-      'organizations',
-      'sites',
-      'users',
-      'roles',
-      'permissions',
-      'nfctags',
-      'nfc_tags',
-      'temperaturerecords',
-      'temperatures',
-      'checklists',
-      'checklisttemplates',
-      'batches',
-      'correctiveactions',
-      'corrective_actions',
-      'auditlogs',
-    ];
-
-    for (const col of collectionsToClear) {
-      try {
-        await db.collection(col).deleteMany({});
-      } catch (err) {
-        // ignore if collection doesn't exist
-      }
-    }
-
-    console.log('✓ Cleaned existing collections');
+    // Clear existing data
+    await db.collection('organizations').deleteMany({});
+    await db.collection('sites').deleteMany({});
+    await db.collection('users').deleteMany({});
+    await db.collection('roles').deleteMany({});
+    await db.collection('permissions').deleteMany({});
+    await db.collection('nfc_tags').deleteMany({});
+    await db.collection('temperatures').deleteMany({});
+    await db.collection('checklists').deleteMany({});
+    await db.collection('corrective_actions').deleteMany({});
 
     // 1. Organization
     const orgId = new ObjectId();
     await db.collection('organizations').insertOne({
       _id: orgId,
-      name: 'Tập đoàn Ẩm thực HYGILOG Việt Nam',
-      slug: 'hygilog-vietnam',
-      address: 'Số 18 Hàng Bè, Phường Hàng Bạc, Quận Hoàn Kiếm, Hà Nội',
-      phone: '024 3828 9999',
-      email: 'contact@hygilog.vn',
-      plan: 'enterprise',
-      status: 'active',
-      settings: {
-        haccpCertified: true,
-        licenseNumber: 'ATTP-HN-2026/0888',
-        timezone: 'Asia/Ho_Chi_Minh',
-      },
+      name: 'HYGILOG Demo Corp',
+      address: '123 Đường Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
+      contactEmail: 'contact@hygilogdemo.vn',
+      contactPhone: '0901234567',
+      isActive: true,
       createdAt: new Date(),
-      updatedAt: new Date(),
+      updatedAt: new Date()
     });
-    console.log('✓ Seeded Organization:', orgId.toString());
+    console.log('Seeded Organization');
 
-    // 2. Sites (Facilities)
+    // 2. Sites
     const siteIds = [new ObjectId(), new ObjectId(), new ObjectId()];
     await db.collection('sites').insertMany([
       {
         _id: siteIds[0],
         organizationId: orgId,
-        name: 'Nhà hàng Phố Cổ (Trụ sở chính)',
-        code: 'HN-CENTRAL-01',
-        address: 'Số 18 Hàng Bè, Hoàn Kiếm, Hà Nội',
-        type: 'restaurant',
-        status: 'active',
-        timezone: 'Asia/Ho_Chi_Minh',
+        name: 'Nhà hàng Phố Cổ',
+        address: '45 Hàng Bạc, Hoàn Kiếm, Hà Nội',
+        isActive: true,
         createdAt: new Date(),
-        updatedAt: new Date(),
+        updatedAt: new Date()
       },
       {
         _id: siteIds[1],
         organizationId: orgId,
-        name: 'Khách sạn Sài Gòn Riverside (Chi nhánh 2)',
-        code: 'HCM-RIVER-02',
-        address: 'Số 88 Bến Vân Đồn, Quận 4, TP. Hồ Chí Minh',
-        type: 'hotel_kitchen',
-        status: 'active',
-        timezone: 'Asia/Ho_Chi_Minh',
+        name: 'Khách sạn Riverside',
+        address: '10 Tôn Đức Thắng, Quận 1, TP.HCM',
+        isActive: true,
         createdAt: new Date(),
-        updatedAt: new Date(),
+        updatedAt: new Date()
       },
       {
         _id: siteIds[2],
         organizationId: orgId,
-        name: 'Bếp Trung Tâm Quận 1 (Central Kitchen)',
-        code: 'HCM-CK-03',
-        address: 'Số 204 Nguyễn Thị Minh Khai, Quận 1, TP. Hồ Chí Minh',
-        type: 'central_kitchen',
-        status: 'active',
-        timezone: 'Asia/Ho_Chi_Minh',
+        name: 'Bếp trung tâm Quận 1',
+        address: '88 Nguyễn Thái Học, Quận 1, TP.HCM',
+        isActive: true,
         createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+        updatedAt: new Date()
+      }
     ]);
-    console.log('✓ Seeded 3 Sites');
+    console.log('Seeded Sites');
 
-    // 3. Permissions Catalog
-    const allPermissions = [
-      'dashboard.view',
-      'users.view', 'users.create', 'users.update', 'users.delete',
-      'sites.view', 'sites.create', 'sites.update', 'sites.delete',
-      'temperature.view', 'temperature.create', 'temperature.update',
-      'checklists.view', 'checklists.create', 'checklists.update', 'checklists.approve',
-      'traceability.view', 'traceability.create', 'traceability.update',
-      'corrective.view', 'corrective.create', 'corrective.approve',
-      'reports.view', 'reports.export',
-      'nfc.scan', 'nfc.manage',
-      'haccp.view', 'haccp.create', 'haccp.update', 'haccp.approve',
-      'settings.view', 'settings.update',
-      'tasks.view', 'tasks.assign',
-      'audit.view',
+    // 3. Permissions & Roles
+    const permissions = [
+      'temperature.create', 'temperature.read', 'temperature.update', 'temperature.delete',
+      'checklists.approve', 'checklists.read', 'checklists.create',
+      'reports.export', 'reports.read',
+      'users.manage', 'sites.manage'
     ];
-
     await db.collection('permissions').insertMany(
-      allPermissions.map((code) => ({
-        code,
-        description: `Quyền thực hiện ${code}`,
-        module: code.split('.')[0],
+      permissions.map(p => ({
+        name: p,
+        description: `Quyền ${p}`,
         createdAt: new Date(),
+        updatedAt: new Date()
       }))
     );
 
-    // 4. Roles (6 distinct roles)
     const roles = [
-      {
-        name: 'super_admin',
-        description: 'Quản trị viên Nền tảng với toàn quyền',
-        scope: 'platform',
-        permissions: allPermissions,
-        isSystem: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'org_admin',
-        description: 'Giám đốc Tuân thủ / Quản trị tổ chức',
-        scope: 'organization',
-        permissions: allPermissions.filter((p) => !p.startsWith('platform.')),
-        isSystem: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'site_manager',
-        description: 'Bếp trưởng Điều hành / Quản lý cơ sở',
-        scope: 'site',
-        permissions: [
-          'dashboard.view', 'users.view', 'sites.view',
-          'temperature.view', 'temperature.create', 'temperature.update',
-          'checklists.view', 'checklists.create', 'checklists.update', 'checklists.approve',
-          'traceability.view', 'traceability.create', 'traceability.update',
-          'corrective.view', 'corrective.create', 'corrective.approve',
-          'reports.view', 'reports.export', 'nfc.scan', 'nfc.manage',
-          'haccp.view', 'tasks.view', 'tasks.assign',
-        ],
-        isSystem: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'supervisor',
-        description: 'Trưởng ca Vệ sinh / Bếp phó',
-        scope: 'site',
-        permissions: [
-          'dashboard.view', 'temperature.view', 'temperature.create',
-          'checklists.view', 'checklists.create', 'checklists.update', 'checklists.approve',
-          'traceability.view', 'traceability.create', 'corrective.view', 'corrective.create',
-          'nfc.scan', 'tasks.view', 'tasks.assign',
-        ],
-        isSystem: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'employee',
-        description: 'Nhân viên Chế biến & Vận hành',
-        scope: 'site',
-        permissions: [
-          'temperature.view', 'temperature.create',
-          'checklists.view', 'checklists.create',
-          'traceability.view', 'traceability.create',
-          'corrective.create', 'nfc.scan', 'tasks.view',
-        ],
-        isSystem: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'auditor',
-        description: 'Thanh tra viên Độc lập (Chỉ xem)',
-        scope: 'organization',
-        permissions: [
-          'dashboard.view', 'sites.view', 'temperature.view', 'checklists.view',
-          'traceability.view', 'corrective.view', 'reports.view', 'reports.export',
-          'haccp.view', 'audit.view',
-        ],
-        isSystem: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+      { name: 'super_admin', permissions, level: 1 },
+      { name: 'org_admin', permissions, level: 2 },
+      { name: 'site_manager', permissions: permissions.filter(p => p !== 'users.manage'), level: 3 },
+      { name: 'supervisor', permissions: ['temperature.create', 'temperature.read', 'checklists.read', 'checklists.create', 'checklists.approve'], level: 4 },
+      { name: 'employee', permissions: ['temperature.create', 'temperature.read', 'checklists.read', 'checklists.create'], level: 5 },
+      { name: 'auditor', permissions: ['temperature.read', 'checklists.read', 'reports.read', 'reports.export'], level: 6 }
     ];
+    await db.collection('roles').insertMany(roles.map(r => ({ ...r, createdAt: new Date(), updatedAt: new Date() })));
+    console.log('Seeded Roles & Permissions');
 
-    await db.collection('roles').insertMany(roles);
-    console.log('✓ Seeded 6 RBAC Roles');
-
-    // 5. Users (One per role, hashed password Hygilog@2026)
+    // 4. Users
     const passwordHash = await bcrypt.hash('Hygilog@2026', 10);
-    const usersList = [
-      { firstName: 'Văn An', lastName: 'Nguyễn', email: 'admin@hygilog.vn', roleId: 'super_admin', siteIds: siteIds },
-      { firstName: 'Thị Mai', lastName: 'Trần', email: 'mai.tran@hygilog.vn', roleId: 'org_admin', siteIds: siteIds },
-      { firstName: 'Hoàng Nam', lastName: 'Lê', email: 'nam.le@hygilog.vn', roleId: 'site_manager', siteIds: [siteIds[0]] },
-      { firstName: 'Minh Đức', lastName: 'Phạm', email: 'duc.pham@hygilog.vn', roleId: 'supervisor', siteIds: [siteIds[1]] },
-      { firstName: 'Thị Hương', lastName: 'Võ', email: 'huong.vo@hygilog.vn', roleId: 'employee', siteIds: [siteIds[0]] },
-      { firstName: 'Quốc Bảo', lastName: 'Đặng', email: 'bao.dang@kiemtoan-attp.gov.vn', roleId: 'auditor', siteIds: siteIds },
+    const users = [
+      { name: 'Nguyễn Văn An', email: 'an.nguyen@hygilogdemo.vn', role: 'super_admin' },
+      { name: 'Trần Thị Mai', email: 'mai.tran@hygilogdemo.vn', role: 'org_admin' },
+      { name: 'Lê Hoàng Nam', email: 'nam.le@hygilogdemo.vn', role: 'site_manager' },
+      { name: 'Phạm Minh Đức', email: 'duc.pham@hygilogdemo.vn', role: 'supervisor' },
+      { name: 'Võ Thị Hương', email: 'huong.vo@hygilogdemo.vn', role: 'employee' },
+      { name: 'Đặng Quốc Bảo', email: 'bao.dang@hygilogdemo.vn', role: 'auditor' }
     ];
 
-    const insertedUsers = await db.collection('users').insertMany(
-      usersList.map((u) => ({
-        ...u,
-        password: passwordHash,
-        organizationId: orgId,
-        status: 'active',
-        lastLogin: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }))
-    );
-    console.log('✓ Seeded 6 Users (Password: Hygilog@2026)');
+    await db.collection('users').insertMany(users.map((u, i) => ({
+      ...u,
+      password: passwordHash,
+      organizationId: orgId,
+      siteId: siteIds[i % 3],
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })));
+    console.log('Seeded Users');
 
-    const adminUserId = Object.values(insertedUsers.insertedIds)[0];
+    // 5. NFC Tags
+    await db.collection('nfc_tags').insertMany(Array.from({ length: 5 }).map((_, i) => ({
+      tagId: `NFC-${1000 + i}`,
+      siteId: siteIds[i % 3],
+      assignedEquipment: `Tủ lạnh ${i + 1}`,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })));
 
-    // 6. NFC Tags
-    await db.collection('nfctags').insertMany([
-      {
-        tagId: '04:7B:A2:8F:33:10:80',
-        label: 'Kho Đông Sâu #1',
-        location: 'Khu Bếp Chính - Tầng B1',
-        siteId: siteIds[0],
-        organizationId: orgId,
-        status: 'active',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        tagId: '04:1E:5C:92:44:21:81',
-        label: 'Tủ Mát Salad & Sơ Chế',
-        location: 'Khu ra món (Pass)',
-        siteId: siteIds[0],
-        organizationId: orgId,
-        status: 'active',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        tagId: '04:99:3D:11:8A:55:82',
-        label: 'Bể Giữ Nóng Món Ăn',
-        location: 'Quầy Buffet',
-        siteId: siteIds[1],
-        organizationId: orgId,
-        status: 'active',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]);
-    console.log('✓ Seeded NFC Stations');
+    // 6. Temperature Records
+    const statuses = ['ok', 'warning', 'critical'];
+    await db.collection('temperatures').insertMany(Array.from({ length: 10 }).map((_, i) => ({
+      siteId: siteIds[i % 3],
+      equipmentId: `EQ-${100 + i}`,
+      temperature: 2 + Math.random() * 8, // 2 to 10 degrees
+      status: statuses[i % 3],
+      recordedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })));
 
-    // 7. Temperature Records
-    await db.collection('temperaturerecords').insertMany([
-      {
-        value: -19.5,
-        unit: 'C',
-        equipmentName: 'Kho Đông Sâu #1',
-        equipmentType: 'freezer',
-        location: 'Bếp chính - Tầng B1',
-        siteId: siteIds[0],
-        organizationId: orgId,
-        recordedBy: adminUserId,
-        status: 'ok',
-        minThreshold: -25,
-        maxThreshold: -18,
-        syncStatus: 'SYNCED',
-        createdAt: new Date(Date.now() - 1000 * 60 * 30),
-      },
-      {
-        value: 1.8,
-        unit: 'C',
-        equipmentName: 'Tủ Mát Thịt Tươi #2',
-        equipmentType: 'chiller',
-        location: 'Khu Sơ Chế',
-        siteId: siteIds[0],
-        organizationId: orgId,
-        recordedBy: adminUserId,
-        status: 'ok',
-        minThreshold: 0,
-        maxThreshold: 4,
-        syncStatus: 'SYNCED',
-        createdAt: new Date(Date.now() - 1000 * 60 * 60),
-      },
-      {
-        value: 5.6,
-        unit: 'C',
-        equipmentName: 'Tủ Mát Salad & Sơ Chế',
-        equipmentType: 'chiller',
-        location: 'Quầy Pass Món',
-        siteId: siteIds[0],
-        organizationId: orgId,
-        recordedBy: adminUserId,
-        status: 'warning',
-        minThreshold: 0,
-        maxThreshold: 4,
-        notes: 'Cửa mở thường xuyên trong giờ cao điểm',
-        syncStatus: 'SYNCED',
-        createdAt: new Date(Date.now() - 1000 * 60 * 90),
-      },
-      {
-        value: 68.2,
-        unit: 'C',
-        equipmentName: 'Bể Giữ Nóng Món Ăn',
-        equipmentType: 'hot_holding',
-        location: 'Quầy Buffet',
-        siteId: siteIds[1],
-        organizationId: orgId,
-        recordedBy: adminUserId,
-        status: 'ok',
-        minThreshold: 63,
-        maxThreshold: 90,
-        syncStatus: 'SYNCED',
-        createdAt: new Date(Date.now() - 1000 * 60 * 120),
-      },
-    ]);
-    console.log('✓ Seeded Temperature Records');
+    // 7. Checklists
+    await db.collection('checklists').insertMany(Array.from({ length: 3 }).map((_, i) => ({
+      siteId: siteIds[i],
+      title: `Kiểm tra vệ sinh cuối ca ${i + 1}`,
+      items: [
+        { task: 'Lau dọn bàn bếp', isCompleted: true },
+        { task: 'Kiểm tra nhiệt độ kho lạnh', isCompleted: false },
+        { task: 'Đổ rác', isCompleted: true }
+      ],
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })));
 
-    // 8. Traceability Batches
-    await db.collection('batches').insertMany([
-      {
-        batchCode: 'LOT-2026-0924-A1',
-        productName: 'Thịt bò Úc Ribeye đông lạnh',
-        supplier: 'Công ty TNHH Thực Phẩm Sạch Toàn Cầu',
-        receivedDate: new Date('2026-09-24T08:15:00Z'),
-        expiryDate: new Date('2026-10-24T00:00:00Z'),
-        quantity: 50,
-        unit: 'kg',
-        siteId: siteIds[0],
-        organizationId: orgId,
-        status: 'active',
-        storageLocation: 'Kho đông sâu #1 - Kệ B2',
-        temperatureRequirement: -18,
-        recordedBy: adminUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        batchCode: 'LOT-2026-0922-C3',
-        productName: 'Cá hồi tươi Na Uy Fillet',
-        supplier: 'Hải Sản Biển Đông Logistics',
-        receivedDate: new Date('2026-09-22T06:30:00Z'),
-        expiryDate: new Date('2026-09-26T00:00:00Z'),
-        quantity: 25,
-        unit: 'kg',
-        siteId: siteIds[0],
-        organizationId: orgId,
-        status: 'active',
-        storageLocation: 'Tủ bảo quản hải sản #2',
-        temperatureRequirement: 2,
-        recordedBy: adminUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]);
-    console.log('✓ Seeded Traceability Batches');
+    // 8. Corrective Actions
+    await db.collection('corrective_actions').insertMany(Array.from({ length: 2 }).map((_, i) => ({
+      siteId: siteIds[i],
+      issueDescription: `Nhiệt độ tủ mát ${i + 1} vượt ngưỡng`,
+      actionTaken: 'Đã báo kỹ thuật kiểm tra và sửa chữa',
+      status: 'open',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })));
 
-    // 9. Corrective Actions (CAPA)
-    await db.collection('correctiveactions').insertMany([
-      {
-        title: 'Tủ mát trưng bày salad vượt ngưỡng 7.2°C trong 45 phút',
-        description: 'Nhiệt kế cảm biến ghi nhận 7.2°C. Quạt gió bị đóng tuyết.',
-        category: 'Nhiệt độ CCP',
-        severity: 'critical',
-        siteId: siteIds[0],
-        organizationId: orgId,
-        reportedBy: adminUserId,
-        status: 'in_progress',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]);
-    console.log('✓ Seeded CAPA Incidents');
-
-    // 10. Checklists
-    await db.collection('checklists').insertMany([
-      {
-        title: 'Vệ sinh & An toàn Bếp ca sáng (Opening Routine)',
-        siteId: siteIds[0],
-        organizationId: orgId,
-        assignedTo: adminUserId,
-        items: [
-          { label: 'Rửa tay sát khuẩn đúng 6 bước, thay đồng phục sạch', checked: true },
-          { label: 'Kiểm tra nhiệt kế kho đông và tủ mát trước sơ chế', checked: true },
-          { label: 'Khử trùng mặt bàn sơ chế inox bằng cồn 70 độ', checked: true },
-          { label: 'Bố trí dao thớt tách biệt màu sắc sống/chín', checked: true },
-        ],
-        status: 'approved',
-        progress: 100,
-        approvedBy: adminUserId,
-        approvedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]);
-    console.log('✓ Seeded Checklists');
-
-    console.log('\n🎉 ALL HYGILOG SEED DATA CREATED SUCCESSFULLY!');
+    console.log('Seeding completed successfully!');
   } catch (error) {
     console.error('Error during seeding:', error);
   } finally {

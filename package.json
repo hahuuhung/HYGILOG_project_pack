@@ -1,7 +1,6 @@
 {
   "name": "hygilog-monorepo",
   "version": "1.0.0",
-  "description": "HYGILOG — Multi-Tenant B2B Food Safety & HACCP Compliance SaaS Platform",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -9,16 +8,6 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces",
-    "build:types": "npm run build --workspace=@hygilog/shared-types",
-    "build:api": "npm run build --workspace=hygilog-api",
-    "build:web": "npm run build --workspace=web",
-    "dev:api": "npm run start:dev --workspace=hygilog-api",
-    "dev:web": "npm run dev --workspace=web",
-    "test": "npm run test --workspaces",
-    "seed": "ts-node infrastructure/scripts/seed.ts"
-  },
-  "devDependencies": {
-    "ts-node": "^10.9.2",
-    "typescript": "^5.0.0"
+    "test": "npm run test --workspaces"
   }
 }

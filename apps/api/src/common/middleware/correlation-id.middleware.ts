@@ -5,8 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class CorrelationIdMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
-    const correlationId = (req.header('x-correlation-id') as string) || uuidv4();
-    (req as any).correlationId = correlationId;
+    const correlationId = req.header('x-correlation-id') || uuidv4();
+    req['correlationId'] = correlationId;
     res.setHeader('x-correlation-id', correlationId);
     next();
   }

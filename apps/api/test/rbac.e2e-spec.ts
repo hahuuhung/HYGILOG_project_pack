@@ -17,14 +17,14 @@ describe('RBAC (e2e)', () => {
     await app.init();
 
     const res1 = await request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({ email: 'admin@hygilog.vn', password: 'Hygilog@2026' });
-    superAdminToken = res1.body.data?.accessToken || 'mock_super_token';
+      .post('/auth/login')
+      .send({ email: 'an.nguyen@hygilogdemo.vn', password: 'Hygilog@2026' });
+    superAdminToken = res1.body.data?.accessToken || 'dummy';
 
     const res2 = await request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({ email: 'huong.vo@hygilog.vn', password: 'Hygilog@2026' });
-    employeeToken = res2.body.data?.accessToken || 'mock_emp_token';
+      .post('/auth/login')
+      .send({ email: 'huong.vo@hygilogdemo.vn', password: 'Hygilog@2026' });
+    employeeToken = res2.body.data?.accessToken || 'dummy';
   });
 
   afterAll(async () => {
@@ -33,22 +33,29 @@ describe('RBAC (e2e)', () => {
 
   it('User with permission -> 200', () => {
     return request(app.getHttpServer())
-      .get('/api/users')
+      .get('/users')
       .set('Authorization', `Bearer ${superAdminToken}`)
       .expect(200);
   });
 
   it('User without permission -> 403', () => {
     return request(app.getHttpServer())
-      .get('/api/users')
+      .get('/users')
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(403);
   });
 
-  it('Tenant isolation: missing or invalid tenant -> 403', () => {
+  it('Tenant A user accessing Tenant B data -> 403', () => {
     return request(app.getHttpServer())
-      .get('/api/sites')
-      .set('Authorization', `Bearer invalid-token`)
+      .get('/sites/other-tenant-site-id')
+      .set('Authorization', `Bearer ${employeeToken}`)
+      .expect(403);
+  });
+
+  it('Disabled user -> 401', () => {
+    return request(app.getHttpServer())
+      .get('/users/me')
+      .set('Authorization', `Bearer dummy-disabled-token`)
       .expect(401);
   });
 });

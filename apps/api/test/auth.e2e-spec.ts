@@ -21,8 +21,8 @@ describe('AuthController (e2e)', () => {
 
   it('/auth/login (POST) - valid credentials', () => {
     return request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({ email: 'admin@hygilog.vn', password: 'Hygilog@2026' })
+      .post('/auth/login')
+      .send({ email: 'an.nguyen@hygilogdemo.vn', password: 'Hygilog@2026' })
       .expect(200)
       .expect((res) => {
         expect(res.body.success).toBe(true);
@@ -32,23 +32,30 @@ describe('AuthController (e2e)', () => {
 
   it('/auth/login (POST) - wrong password', () => {
     return request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({ email: 'admin@hygilog.vn', password: 'wrongpassword' })
+      .post('/auth/login')
+      .send({ email: 'an.nguyen@hygilogdemo.vn', password: 'wrongpassword' })
       .expect(401)
       .expect((res) => {
         expect(res.body.success).toBe(false);
       });
   });
 
+  it('/auth/login (POST) - disabled user', () => {
+    return request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'disabled@hygilogdemo.vn', password: 'Hygilog@2026' })
+      .expect(401);
+  });
+
   it('/protected-route (GET) - without token', () => {
     return request(app.getHttpServer())
-      .get('/api/users')
+      .get('/users/me')
       .expect(401);
   });
 
   it('/protected-route (GET) - with expired token', () => {
     return request(app.getHttpServer())
-      .get('/api/users')
+      .get('/users/me')
       .set('Authorization', 'Bearer expired.token.here')
       .expect(401);
   });

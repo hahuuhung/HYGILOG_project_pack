@@ -35,26 +35,22 @@ export default function LoginPage() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       if (email === 'admin@hygilog.vn' && password === 'password123') {
-        const token = 'mock_jwt_token_' + Date.now();
-        document.cookie = `auth-storage=${token}; path=/; max-age=86400; SameSite=Lax`;
         setAuth({
           user: {
             id: '1',
             email: 'admin@hygilog.vn',
-            name: 'Nguyễn Văn A (Admin)',
+            name: 'Admin User',
             role: 'super_admin',
             organizationId: 'org_1'
           },
-          accessToken: token,
+          accessToken: 'mock_token',
           refreshToken: 'mock_refresh',
           permissions: ['all']
         });
-        window.location.href = '/dashboard';
-        return;
+        router.push('/dashboard');
       } else {
         setErrors({ form: 'Email hoặc mật khẩu không chính xác' });
       }
-
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: any = {};

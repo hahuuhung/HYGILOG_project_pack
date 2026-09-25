@@ -28,7 +28,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       success: false,
       statusCode: status,
       error: typeof message === 'string' ? message : (message as any).message || message,
-      requestId: (request as any).correlationId,
+      requestId: request['correlationId'],
       timestamp: new Date().toISOString(),
       path: request.url,
     };

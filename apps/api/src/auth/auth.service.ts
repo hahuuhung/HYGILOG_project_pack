@@ -1,10 +1,10 @@
-import { Injectable, UnauthorizedException, Inject, InternalServerErrorException, Optional } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject, InternalServerErrorException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { RolesService } from '../roles/roles.service';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
@@ -13,18 +13,16 @@ export class AuthService {
     private rolesService: RolesService,
     private jwtService: JwtService,
     private configService: ConfigService,
-    @Optional() @Inject('REDIS_CLIENT') private redisClient?: any,
+    @Inject('REDIS_CLIENT') private redisClient: any,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
-    if (user && user.status === 'active' && user.password) {
+    if (user && user.isActive) {
       const isMatch = await bcrypt.compare(pass, user.password);
       if (isMatch) {
-        const userObj = (user as any).toObject ? (user as any).toObject() : user;
-        delete userObj.password;
-        delete userObj.refreshToken;
-        return userObj;
+        const { password, ...result } = (user as any).toObject ? (user as any).toObject() : user;
+        return result;
       }
     }
     return null;
@@ -42,11 +40,11 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN', '15m'),
+      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') || '15m',
     });
     
     const refreshToken = this.jwtService.sign({ sub: user._id.toString() }, {
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d'),
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d',
     });
 
     await this.usersService.updateRefreshToken(user._id.toString(), refreshToken);
@@ -55,10 +53,10 @@ export class AuthService {
       accessToken,
       refreshToken,
       user: {
-        id: user._id.toString(),
+        id: user._id,
         email: user.email,
-        fullName: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-        organizationId: user.organizationId.toString(),
+        fullName: user.fullName,
+        organizationId: user.organizationId,
         roleId: user.roleId,
         permissions,
       },
@@ -70,7 +68,7 @@ export class AuthService {
       const decoded = this.jwtService.verify(token);
       const user = await this.usersService.findById(decoded.sub);
       
-      if (!user || user.status !== 'active' || user.refreshToken !== token) {
+      if (!user || !user.isActive || user.refreshToken !== token) {
         throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn');
       }
 
@@ -91,7 +89,8 @@ export class AuthService {
       }
       
       await this.usersService.updateRefreshToken(userId, null);
-      return { success: true, message: 'Đăng xuất thành công' };
+      
+      return { success: true };
     } catch (error) {
       throw new InternalServerErrorException('Lỗi khi đăng xuất');
     }
@@ -99,11 +98,7 @@ export class AuthService {
 
   async isTokenBlacklisted(token: string): Promise<boolean> {
     if (!this.redisClient || typeof this.redisClient.get !== 'function') return false;
-    try {
-      const result = await this.redisClient.get(`bl_${token}`);
-      return !!result;
-    } catch {
-      return false;
-    }
+    const result = await this.redisClient.get(`bl_${token}`);
+    return !!result;
   }
 }

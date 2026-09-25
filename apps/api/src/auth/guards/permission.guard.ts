@@ -24,16 +24,12 @@ export class PermissionGuard implements CanActivate {
       throw new ForbiddenException('Không có quyền thực hiện hành động này');
     }
 
-    if (user.permissions.includes('all') || user.permissions.includes('*')) {
-      return true;
-    }
-
     const hasPermission = requiredPermissions.every((permission) =>
       user.permissions.includes(permission),
     );
 
     if (!hasPermission) {
-      throw new ForbiddenException('Không có quyền thực hiện hành động này (Thiếu quyền: ' + requiredPermissions.join(', ') + ')');
+      throw new ForbiddenException('Không có quyền thực hiện hành động này');
     }
 
     return true;

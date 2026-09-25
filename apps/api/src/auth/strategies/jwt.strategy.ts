@@ -22,11 +22,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(request: Request, payload: JwtPayload): Promise<AuthenticatedUser> {
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(request as any);
-    if (token) {
-      const isBlacklisted = await this.authService.isTokenBlacklisted(token);
-      if (isBlacklisted) {
-        throw new UnauthorizedException('Token đã bị thu hồi');
-      }
+    const isBlacklisted = await this.authService.isTokenBlacklisted(token);
+    
+    if (isBlacklisted) {
+      throw new UnauthorizedException('Token đã bị thu hồi');
     }
 
     return {
