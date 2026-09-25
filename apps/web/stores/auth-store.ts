@@ -26,9 +26,25 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       permissions: [],
-      setAuth: (data) => set({ ...data }),
-      setAccessToken: (token: string) => set({ accessToken: token }),
-      logout: () => set({ user: null, accessToken: null, refreshToken: null, permissions: [] }),
+      setAuth: (data) => {
+        if (typeof document !== 'undefined') {
+          document.cookie = `auth-storage=${data.accessToken}; path=/; max-age=86400; SameSite=Lax`;
+        }
+        set({ ...data });
+      },
+      setAccessToken: (token: string) => {
+        if (typeof document !== 'undefined') {
+          document.cookie = `auth-storage=${token}; path=/; max-age=86400; SameSite=Lax`;
+        }
+        set({ accessToken: token });
+      },
+      logout: () => {
+        if (typeof document !== 'undefined') {
+          document.cookie = 'auth-storage=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        }
+        set({ user: null, accessToken: null, refreshToken: null, permissions: [] });
+      },
+
     }),
     {
       name: 'auth-storage',
